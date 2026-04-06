@@ -62,15 +62,12 @@ def create_cells(rows, cols):
                 if index > 4:
                     index = 0
 
-    # ball numbers mean the deck that numbers are pulled from
-    bingo_numbers = random_numbers
-    random.shuffle(bingo_numbers)
-
     for y in range(0, rows):
         new_row = []
         for x in range(0, cols):
             new_row.append(random_numbers[x + (y * 5)])
         number.append(new_row)
+
 
     # at game start, score is equal to the cell's number
     score = number
@@ -89,6 +86,13 @@ def create_cells(rows, cols):
             new_row.append("no")
         tile_type.append(new_row)
 
+    # ball numbers mean the deck that numbers are pulled from
+    for num in random_numbers:
+        entry = []
+        entry.append(num)
+        entry.append("")
+        bingo_numbers.append(entry)
+    random.shuffle(bingo_numbers)
 
     return letter, number, score, addons, tile_type, bingo_numbers
 
@@ -147,22 +151,22 @@ def game_interaction(score):
     return user
 
 def game_roll():
-    roll = bingo_deck[0]
+    roll = bingo_deck[0][0]
+    # removes number from the deck and adds it to the discard only if there are still numbers in deck
     if not len(bingo_deck) <= 1:
-        bingo_deck.remove(roll)
-        bingo_discard.append(roll)
+        bingo_discard.append(bingo_deck[0])
+        bingo_deck.remove(bingo_deck[0])
     else:
+        #if not adds all numbers from discard into deck and shuffles
         deck_reroll()
     return roll
 
 def deck_reroll():
-    while len(bingo_discard) > 0:
-            for ball in bingo_discard:
-                bingo_deck.append(ball)
-                bingo_discard.remove(ball)
+    bingo_deck.extend(bingo_discard)
+    del bingo_discard[:]
     random.shuffle(bingo_deck)
 
-def activate_cell(numbers, tile_scores, roll):
+def score_cell(numbers, tile_scores, roll):
     score = 0
     for nums_row, score_row in zip(numbers, tile_scores):
         for number, tile_score in zip(nums_row, score_row):
@@ -184,6 +188,7 @@ dead = "."
 
 end_of_round = True
 game_end = False
+show_shop = False
 
 score = 0
 
@@ -199,11 +204,13 @@ while not game_end:
 
         if user_input.lower() == "ro":
             round_roll = game_roll()
-            print("Rolled: ", round_roll)
-            score += activate_cell(cell_number, cell_score, round_roll)
+            print("Rolled: ", round_roll) 
+            score += score_cell(cell_number, cell_score, round_roll)
         elif user_input.lower() == "re":
             deck_reroll()
             score -= round(score*0.1)
+        elif user_input.lower() == "sh":
+            show_shop = True
 
         # update
     # create a copy of grid
