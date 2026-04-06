@@ -10,23 +10,25 @@ import random
 
 
 # functions
-def create_grid(rows, cols, dead_s):
+def create_grid(rows, cols):
     board = []
     # outer loop iterates over rows
     for y in range(0,  rows):
         new_row = []
         # inner loop iterates over columns
         for x in range(0, cols):
-            new_row.append(dead_s)
+            new_row.append('x')
         board.append(new_row)
 
     return board
 
-def create_cells(board, rows, cols):
+def create_cells(rows, cols):
     letter = []
     number = []
     score = []
     addons = []
+    tile_type = []
+    bingo_numbers = []
 
     # adding a letter to each cell
     for y in range(0, rows):
@@ -58,19 +60,35 @@ def create_cells(board, rows, cols):
                 index += 1
                 if index > 4:
                     index = 0
-        #print(random_numbers)
+
+    # ball numbers mean the
+    bingo_numbers = random_numbers
 
     for y in range(0, rows):
         new_row = []
         for x in range(0, cols):
-            #print(y + (x * 5))
             new_row.append(random_numbers[x + (y * 5)])
         number.append(new_row)
 
     # at game start, score is equal to the cell's number
     score = number
 
-    return letter, number, score
+    # setting a 2d list of addons for tiles (none when game starts)
+    for y in range(0, rows):
+        new_row = []
+        for x in range(0, cols):
+            new_row.append("")
+        addons.append(new_row)
+
+    # at game start, all tiles are normal type (abbreviated as "no")
+    for y in range(0, rows):
+        new_row = []
+        for x in range(0, cols):
+            new_row.append("no")
+        tile_type.append(new_row)
+
+
+    return letter, number, score, addons, tile_type, bingo_numbers
 
 
 
@@ -83,7 +101,7 @@ def display_board(letters, numbers, scores):
             print(f'[{letter} {number} {score}]', end=" ")
         print()
 
-def count_neighbors(board, cur_x, cur_y, alive_s):
+def count_neighbors(board, cur_x, cur_y):
     row_num = len(board)
     col_num = len(board[0])
 
@@ -102,37 +120,50 @@ def count_neighbors(board, cur_x, cur_y, alive_s):
     ]
 
     for cell in neighbors:
-        if cell == alive_s:
+        if cell == 'x':
             neighbor_count += 1
 
     return neighbor_count
 
-def update_cell(cell, num_neighbors, alive_s, dead_s):
-    if cell == alive_s and (num_neighbors == 2 or num_neighbors == 3):
-        return alive_s
-    elif cell == dead_s and num_neighbors == 3:
-        return alive_s
-    else:
-        return dead_s
+def update_cell(cell, num_neighbors):
+    pass
+
+def game_interaction():
+    user = input("ro for roll | re to refresh deck | sh to open shop\n")
+    return user
+
+def game_roll(deck):
+    return deck[random.randint(0,len(deck)-1)]
 
 # ----- global variables -----
-alive = "X"
-dead = "."
-
-num_rows = 5
+num_rows = 5 #num rows can be increased to extend board downward num cols can not, things break
 num_cols = 5
 
-# cell arrays
+charges = 15
+bingo_discard = []
+
+alive = "x"
+dead = "."
+
+end_of_round = True
+game_end = False
 
 # ----- main code -----
-grid = create_grid(num_rows, num_cols, dead)
-cell_letter, cell_number, cell_score = create_cells(grid, num_rows, num_cols)
-grid[1][1] = grid[1][2] = grid[1][3] = alive
-#grid[2][0] = grid[2][1] = grid[2][2] = grid[1][2] = grid[0][1] = alive
+grid = create_grid(num_rows, num_cols)
+cell_letter, cell_number, cell_score, cell_addons, cell_type, bingo_deck = create_cells(num_rows, num_cols)
 
-#grid, num_rows, num_cols = read_file("test_board.txt")
+#for generation in range(0, 5):
+while not game_end:
+    # input
+    if end_of_round:
+        user_input = game_interaction()
 
-for generation in range(0, 5):
+        if user_input.lower() == "ro":
+            print(game_roll(bingo_deck))
+
+        
+
+    # update
     # create a copy of grid
     grid_copy = copy.deepcopy(grid)
 
@@ -142,13 +173,29 @@ for generation in range(0, 5):
         for x in range(num_cols):
 
             # count alive neighbors
-            alive_neighbors = count_neighbors(grid_copy, x, y, alive)
+            alive_neighbors = count_neighbors(grid_copy, x, y)
 
             #update cell state
-            grid[y][x] = update_cell(grid_copy[y][x], alive_neighbors, alive, dead)
+            grid[y][x] = update_cell(grid_copy[y][x], alive_neighbors)
 
-    # print board
+    # output
     display_board(cell_letter, cell_number, cell_score)
-    #print(random_numbers)
     print()
     time.sleep(0.65)
+
+
+
+'''
+game stuff to remember
+
+game loop:
+    input
+    update
+    output
+
+bingo numbers will be drawn until empty, then will be reshuffled
+bingo balls only have numbers, not letters, tile letters are used for tile abilities to combo
+tiles can be activated or triggered: 
+    activated means the tile gives score and uses its effect
+    triggered means the tile only uses its effect
+'''
