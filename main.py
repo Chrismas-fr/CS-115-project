@@ -107,12 +107,12 @@ def create_cells(rows, cols):
 
 
 
-def display_board(letters, numbers, scores):
+def display_board(letters, numbers, scores, tile_indexes):
     # outer loop iterates rows
-    for row, row_num, row_score in zip(letters, numbers, scores):
+    for row, row_num, row_score, row_index in zip(letters, numbers, scores, tile_indexes):
         # inner loop iterates columns
-        for letter, number, score in zip(row, row_num, row_score):
-            print(f'[{letter} {number} {score}]', end=" ")
+        for letter, number, score, tile_index in zip(row, row_num, row_score, row_index):
+            print(f'[{letter} {number} {score} - {tile_index}]', end=" ")
         print()
 
 def count_neighbors(board, cur_x, cur_y):
@@ -175,19 +175,16 @@ def deck_reroll():
     del bingo_discard[:]
     random.shuffle(bingo_deck)
 
-def score_cell(numbers, tile_scores, roll):
-    score = 0
+def find_cell(numbers, roll):
     index_y = 0
     index_x = 0
     triggered_cells = []
-    # iterating vertically through tile numbers and scores
-    for nums_row, score_row in zip(numbers, tile_scores):
-        # iterating horizontally through tile numbers and scores
-        for number, tile_score in zip(nums_row, score_row):
-            # scoring tiles if rolled number is on tile
+    # iterating vertically through tile numbers
+    for nums_row in numbers:
+        # iterating horizontally through tile numbers
+        for number in nums_row:
+            # finding tiles if rolled number is on tile
             if roll == number:
-                score += tile_score
-
                 # saves the locations of scored cells
                 cell_input = []
                 cell_input.append(index_y)
@@ -201,29 +198,30 @@ def score_cell(numbers, tile_scores, roll):
             index_y = 0
     
     print(triggered_cells)
-    return score, triggered_cells
+    return triggered_cells
 
 # classes
 class Trigger_Tiles:
-    def __init__(self, tile_type, tile_index, tile_yx):
+    def __init__(self, tile_type, tile_index, cur_x, cur_y):
         self.tile_type = tile_type
         self.tile_index = tile_index
-        self.tile_yx = tile_yx
+        self.cur_x = cur_x
+        self.cur_y = cur_y
 
-    def find_neighbors(tile_index, tile_yx):
-        row_num = len(tile_index)
-        col_num = len(tile_index[0])
+    def find_neighbors(self):
+        row_num = len(self.tile_index)
+        col_num = len(self.tile_index[0])
 
-        left = (cur_x - 1) % col_num
-        right = (cur_x + 1) % col_num
+        left = (self.cur_x - 1) % col_num
+        right = (self.cur_x + 1) % col_num
 
-        above = (cur_y - 1) % row_num
-        below = (cur_y + 1) % row_num
+        above = (self.cur_y - 1) % row_num
+        below = (self.cur_y + 1) % row_num
 
         neighbors = [
-                                   tile_index[above][cur_x],                     
-            tile_index[cur_y][left],                        tile_index[cur_y][right],
-                                   tile_index[below][cur_x]                     
+                                              self.tile_index[above][self.cur_x],                     
+            self.tile_index[self.cur_y][left],                                  self.tile_index[self.cur_y][right],
+                                              self.tile_index[below][self.cur_x]                     
         ]
 
         return neighbors
@@ -261,13 +259,14 @@ while not game_end:
         if user_input.lower() == "ro":
             round_roll = game_roll()
             print("Rolled: ", round_roll) 
-            scored_cells, triggered_cells_yx = score_cell(cell_number, cell_score, round_roll)
-            score += scored_cells
+            triggered_cells_yx = find_cell(cell_number, round_roll)
         elif user_input.lower() == "re":
             deck_reroll()
             score -= round(score*0.1)
         elif user_input.lower() == "sh":
             show_shop = True
+    
+    end_of_round = False
 
         # update
     # create a copy of grid
@@ -286,13 +285,18 @@ while not game_end:
 
             
     while not end_of_round:
-        
-
+        for cell in triggered_cells_yx:
+            cell_x = cell[1]
+            cell_y = cell[0]
+            test_tile = Trigger_Tiles(cell_type, cell_index, cell[1], cell[0])
+            print("neighbors: ", test_tile.find_neighbors())
+            end_of_round = True
         # output
-    display_board(cell_letter, cell_number, cell_score)
+    display_board(cell_letter, cell_number, cell_score, cell_index)
     print("deck ", bingo_deck, "discard ", bingo_discard)
     print("score ", score)
     print()
+    
     #print(tile_test.find_neighbors())
 
     time.sleep(0)
