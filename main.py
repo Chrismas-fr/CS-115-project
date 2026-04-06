@@ -79,11 +79,11 @@ def create_cells(rows, cols):
             new_row.append("")
         addons.append(new_row)
 
-    # at game start, all tiles are normal type (abbreviated as "no")
+    # at game start, all tiles are normal type (abbreviated as "nor")
     for y in range(0, rows):
         new_row = []
         for x in range(0, cols):
-            new_row.append("no")
+            new_row.append("nor")
         tile_type.append(new_row)
 
     # ball numbers mean the deck that numbers are pulled from
@@ -232,6 +232,7 @@ while not game_end:
     print("deck ", bingo_deck, "discard ", bingo_discard)
     print("score ", score)
     print()
+    print(cell_type)
     time.sleep(0.65)
 
 
