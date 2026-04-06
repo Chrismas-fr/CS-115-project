@@ -7,6 +7,7 @@ Bingo roguelike game
 import copy
 import time
 import random
+import math
 
 
 # functions
@@ -61,8 +62,9 @@ def create_cells(rows, cols):
                 if index > 4:
                     index = 0
 
-    # ball numbers mean the
+    # ball numbers mean the deck that numbers are pulled from
     bingo_numbers = random_numbers
+    random.shuffle(bingo_numbers)
 
     for y in range(0, rows):
         new_row = []
@@ -128,15 +130,50 @@ def count_neighbors(board, cur_x, cur_y):
 def update_cell(cell, num_neighbors):
     pass
 
-def game_interaction():
-    user = input("ro for roll | re to refresh deck | sh to open shop\n")
+def game_interaction(score):
+    good_input = False
+
+    while not good_input:
+        user = input("ro for roll | re to refresh deck | sh to open shop\n")
+
+        if not user == "ro" and not user == "re" and not user == "sh":
+            print("Not a valid input, use one of the options.")
+        elif user == "re" and score < 100:
+            print("You need at least 100 score to refresh.")
+        else:
+            good_input = True
+
+
     return user
 
-def game_roll(deck):
-    return deck[random.randint(0,len(deck)-1)]
+def game_roll():
+    roll = bingo_deck[0]
+    if not len(bingo_deck) <= 1:
+        bingo_deck.remove(roll)
+        bingo_discard.append(roll)
+    else:
+        deck_reroll()
+    return roll
+
+def deck_reroll():
+    while len(bingo_discard) > 0:
+            for ball in bingo_discard:
+                bingo_deck.append(ball)
+                bingo_discard.remove(ball)
+    random.shuffle(bingo_deck)
+
+def activate_cell(numbers, tile_scores, roll):
+    score = 0
+    for nums_row, score_row in zip(numbers, tile_scores):
+        for number, tile_score in zip(nums_row, score_row):
+            if roll == number:
+                score += tile_score
+    return score
+
 
 # ----- global variables -----
-num_rows = 5 #num rows can be increased to extend board downward num cols can not, things break
+num_rows = int(input("number of rows: >>\t"))
+# num_rows = 5 #num rows can be increased to extend board downward num cols can not, things break
 num_cols = 5
 
 charges = 15
@@ -148,22 +185,27 @@ dead = "."
 end_of_round = True
 game_end = False
 
+score = 0
+
 # ----- main code -----
 grid = create_grid(num_rows, num_cols)
 cell_letter, cell_number, cell_score, cell_addons, cell_type, bingo_deck = create_cells(num_rows, num_cols)
 
 #for generation in range(0, 5):
 while not game_end:
-    # input
+        # input
     if end_of_round:
-        user_input = game_interaction()
+        user_input = game_interaction(score)
 
         if user_input.lower() == "ro":
-            print(game_roll(bingo_deck))
+            round_roll = game_roll()
+            print("Rolled: ", round_roll)
+            score += activate_cell(cell_number, cell_score, round_roll)
+        elif user_input.lower() == "re":
+            deck_reroll()
+            score -= round(score*0.1)
 
-        
-
-    # update
+        # update
     # create a copy of grid
     grid_copy = copy.deepcopy(grid)
 
@@ -178,8 +220,10 @@ while not game_end:
             #update cell state
             grid[y][x] = update_cell(grid_copy[y][x], alive_neighbors)
 
-    # output
+        # output
     display_board(cell_letter, cell_number, cell_score)
+    print("deck ", bingo_deck, "discard ", bingo_discard)
+    print("score ", score)
     print()
     time.sleep(0.65)
 
