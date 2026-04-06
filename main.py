@@ -138,6 +138,7 @@ def game_interaction(score):
     good_input = False
 
     while not good_input:
+        
         user = input("ro for roll | re to refresh deck | sh to open shop\n")
 
         if not user == "ro" and not user == "re" and not user == "sh":
@@ -168,11 +169,39 @@ def deck_reroll():
 
 def score_cell(numbers, tile_scores, roll):
     score = 0
+    index_y = 0
+    index_x = 0
+    triggered_cells = []
+    # iterating vertically through tile numbers and scores
     for nums_row, score_row in zip(numbers, tile_scores):
+        # iterating horizontally through tile numbers and scores
         for number, tile_score in zip(nums_row, score_row):
+            # scoring tiles if rolled number is on tile
             if roll == number:
                 score += tile_score
-    return score
+
+                # saves the locations of scored cells
+                cell_input = []
+                cell_input.append(index_y)
+                cell_input.append(index_x)
+                triggered_cells.append(cell_input)
+            index_x += 1
+            if index_x > num_cols - 1:
+                index_x = 0
+        index_y += 1
+        if index_y > num_rows - 1:
+            index_y = 0
+    
+    print(triggered_cells)
+    return score, triggered_cells
+
+# classes
+class trigger_tiles:
+    def __init__(self, tile_type, tile_yx):
+        self.tile_type = tile_type
+        self.tile_yx = tile_yx
+
+    
 
 
 # ----- global variables -----
@@ -205,7 +234,8 @@ while not game_end:
         if user_input.lower() == "ro":
             round_roll = game_roll()
             print("Rolled: ", round_roll) 
-            score += score_cell(cell_number, cell_score, round_roll)
+            scored_cells, triggered_cells_yx = score_cell(cell_number, cell_score, round_roll)
+            score += scored_cells
         elif user_input.lower() == "re":
             deck_reroll()
             score -= round(score*0.1)
@@ -234,8 +264,6 @@ while not game_end:
     print()
     time.sleep(0.65)
 
-
-
 '''
 game stuff to remember
 
@@ -249,4 +277,43 @@ bingo balls only have numbers, not letters, tile letters are used for tile abili
 tiles can be activated or triggered: 
     activated means the tile gives score and uses its effect
     triggered means the tile only uses its effect
+
+tile types + code names:
+    trigger 4/8 neighbors: tgn
+    activated when another column activates: col
+    activates 1-x tiles across board: acb
+    large score but no number: nnb
+    chance to give score when activated; large score: gmb
+    50% chance to activate when any number rolled: jmp
+    score multiplied x1.04 permanently: prm
+
+addon types + code names: (additive means can be added to a tile multiple times)
+    1.x extra score (additive): mul
+    adds secondary number: exn
+    %chance to multiply score x times: xml
+    gives all tiles 20% of this tiles mult for 2 rounds after activation: phl
+    chance traits are 20x% more likely (additave): xch
+    adds flat score to tile: scr
+
+deck addons:
+    doesn't consume charges: crg
+    %chance to add charges: adc
+    activates 1 random tile with different number: rnd
+    triggers 10 random tiles: trg
+    multiplies round score by x times: rsc
+    small chance to add permanent mult to all affected tiles: pml
+    very small chance to activate all tiles: aat
+
+tile classes:
+    triggers others: tgn, acb
+    triggered by others: col, jmp
+    effect when triggered: nnb, gmb, prm
+
+addon classes:
+    effect when triggered: mul, exn, xml, phl, xch, scr
+
+deck classes: 
+    changes charges: crg, adc
+    triggers unrelated tiles: rnd, trg, aat
+    adds a multiplier: rsc, pml
 '''
