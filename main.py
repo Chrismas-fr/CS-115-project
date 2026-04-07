@@ -175,36 +175,67 @@ def deck_reroll():
     del bingo_discard[:]
     random.shuffle(bingo_deck)
 
-def find_cell(numbers, roll):
+def find_cell(numbers, roll, triggered_yn):
+    if triggered_yn:
+        index_y = 0
+        index_x = 0
+        triggered_cells = []
+        # iterating vertically through tile numbers
+        for nums_row in numbers:
+            # iterating horizontally through tile numbers
+            for number in nums_row:
+                # finding tiles if rolled number is on tile
+                if roll == number:
+                    # saves the locations of scored cells
+                    cell_input = []
+                    cell_input.append(index_y)
+                    cell_input.append(index_x)
+                    triggered_cells.append(cell_input)
+                index_x += 1
+                if index_x > num_cols - 1:
+                    index_x = 0
+            index_y += 1
+            if index_y > num_rows - 1:
+                index_y = 0
+        
+        print(triggered_cells)
+        return triggered_cells
+    else:
+        #take index round down to multiple of 5 subtract that from original to get remainder (eg 21 becomes 20 21-20 = 1 getting 20 and 1) divide 20 by 5 and that gives y value | remainder gives x value
+        # this is to find a number's coordinates from its index, so I am using the "numbers" parameter as index
+        triggered_cells = []
+        tens = math.floor(numbers / 5) * 5
+        cell_input = []
+        cell_input.append(int(tens/5))
+        cell_input.append(numbers-tens)
+        return cell_input
+
+def score_cell(cell_yx, tile_scores):
+    score = 0
+    cell_x = 0
+    cell_y = 0
+    for yx in cell_yx:
+        print(yx)
+        cell_x = yx[1]
+        cell_y = yx[0]
     index_y = 0
     index_x = 0
-    triggered_cells = []
-    # iterating vertically through tile numbers
-    for nums_row in numbers:
-        # iterating horizontally through tile numbers
-        for number in nums_row:
-            # finding tiles if rolled number is on tile
-            if roll == number:
-                # saves the locations of scored cells
-                cell_input = []
-                cell_input.append(index_y)
-                cell_input.append(index_x)
-                triggered_cells.append(cell_input)
-            index_x += 1
-            if index_x > num_cols - 1:
-                index_x = 0
+    for row in tile_scores:
+        if index_y == cell_y:
+            for tile_score in row:    
+                if index_x == cell_x:
+                    score += tile_score
+                index_x += 1
         index_y += 1
-        if index_y > num_rows - 1:
-            index_y = 0
     
-    print(triggered_cells)
-    return triggered_cells
+    return score
 
 # classes
 class Trigger_Tiles:
-    def __init__(self, tile_type, tile_index, cur_x, cur_y):
+    def __init__(self, tile_type, tile_index, tile_number, cur_x, cur_y):
         self.tile_type = tile_type
         self.tile_index = tile_index
+        self.tile_number = tile_number
         self.cur_x = cur_x
         self.cur_y = cur_y
 
@@ -223,8 +254,13 @@ class Trigger_Tiles:
             self.tile_index[self.cur_y][left],                                  self.tile_index[self.cur_y][right],
                                               self.tile_index[below][self.cur_x]                     
         ]
+        neighbor_locations = []
+        for neighbor in neighbors:
+            add_layer = []
+            add_layer.append(find_cell(neighbor, 0, False))
+            neighbor_locations.append(add_layer)
 
-        return neighbors
+        return neighbor_locations
 
     
 
@@ -256,19 +292,10 @@ while not game_end:
     if end_of_round:
         user_input = game_interaction(score)
 
-        if user_input.lower() == "ro":
-            round_roll = game_roll()
-            print("Rolled: ", round_roll) 
-            triggered_cells_yx = find_cell(cell_number, round_roll)
-        elif user_input.lower() == "re":
-            deck_reroll()
-            score -= round(score*0.1)
-        elif user_input.lower() == "sh":
-            show_shop = True
-    
-    end_of_round = False
-
         # update
+
+    if charges <= 0:
+        game_end = True
     # create a copy of grid
     grid_copy = copy.deepcopy(grid)
 
@@ -283,15 +310,32 @@ while not game_end:
             #update cell state
             grid[y][x] = update_cell(grid_copy[y][x], alive_neighbors)
 
-            
+    if end_of_round:
+        if user_input.lower() == "ro":
+            round_roll = game_roll()
+            print("Rolled: ", round_roll) 
+            triggered_cells_yx = find_cell(cell_number, round_roll, True)
+            score_round = score_cell(triggered_cells_yx, cell_score)
+            score += score_round
+            charges -= 1
+        elif user_input.lower() == "re":
+            deck_reroll()
+            score -= round(score*0.1)
+        elif user_input.lower() == "sh":
+            show_shop = True
+    end_of_round = False
+    
     while not end_of_round:
         for cell in triggered_cells_yx:
-            cell_x = cell[1]
-            cell_y = cell[0]
-            test_tile = Trigger_Tiles(cell_type, cell_index, cell[1], cell[0])
+            test_tile = Trigger_Tiles(cell_type, cell_index, cell_number, cell[1], cell[0])
             print("neighbors: ", test_tile.find_neighbors())
+            for neighbor in test_tile.find_neighbors():
+                add_score = score_cell(neighbor, cell_score)
+                score += add_score
+                print("adding score: ", add_score, neighbor)
             end_of_round = True
         # output
+    print("charges: ", charges)
     display_board(cell_letter, cell_number, cell_score, cell_index)
     print("deck ", bingo_deck, "discard ", bingo_discard)
     print("score ", score)
@@ -300,6 +344,8 @@ while not game_end:
     #print(tile_test.find_neighbors())
 
     time.sleep(0)
+
+print(f"Game over! Your final score was: {score}")
 
 '''
 game stuff to remember
@@ -353,4 +399,6 @@ deck classes:
     changes charges: crg, adc
     triggers unrelated tiles: rnd, trg, aat
     adds a multiplier: rsc, pml
+
+to add a pre game settings menu make a separate file that writes to the file that main reads from
 '''
