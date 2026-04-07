@@ -84,7 +84,7 @@ def create_cells(rows, cols):
     for y in range(0, rows):
         new_row = []
         for x in range(0, cols):
-            new_row.append("nor")
+            new_row.append("tgn")
         tile_type.append(new_row)
 
     # ball numbers mean the deck that numbers are pulled from
@@ -198,7 +198,7 @@ def find_cell(numbers, roll, triggered_yn):
             if index_y > num_rows - 1:
                 index_y = 0
         
-        print(triggered_cells)
+        #print(triggered_cells)
         return triggered_cells
     else:
         #take index round down to multiple of 5 subtract that from original to get remainder (eg 21 becomes 20 21-20 = 1 getting 20 and 1) divide 20 by 5 and that gives y value | remainder gives x value
@@ -215,10 +215,14 @@ def score_cell(cell_yx, tile_scores):
     score = 0
     cell_x = 0
     cell_y = 0
+    '''
     for yx in cell_yx:
         print(yx)
         cell_x = yx[1]
         cell_y = yx[0]
+    '''
+    cell_x = cell_yx[1]
+    cell_y = cell_yx[0]
     index_y = 0
     index_x = 0
     for row in tile_scores:
@@ -248,21 +252,44 @@ def play_out_round(user, tile_number, tile_score, tile_type, tile_index, game_sc
             pass
     end_of_round = False
     
-    while not end_of_round and game_generations > 0:
-        tile_coords = find_cell(tile_number, round_roll, True)
-        score_round = score_cell(tile_coords, tile_score)
-        game_score += score_round
-        game_charges -= 1
+    tiles_to_score = find_cell(tile_number, round_roll, True)
+    print(tiles_to_score, "tiles to score")
+
+    tts_copy = copy.deepcopy(tiles_to_score)
+
+    while game_generations > 0:
+        for tile_being_scored in tiles_to_score:
+            print(tile_being_scored)
+            game_tile = Trigger_Tiles(tile_type, tile_index, tile_number, tile_being_scored[1], tile_being_scored[0])
+            #print("neighbors ", game_tile.find_neighbors())
+            print("tile type ", tile_type[tile_being_scored[1]][tile_being_scored[0]])
+            if tile_type[tile_being_scored[1]][tile_being_scored[0]] == "nor":
+                add_score = score_cell(tile_being_scored, tile_score)
+                game_score += add_score
+                print("adding score: ", add_score)
+                tiles_to_score.remove(tiles_to_score[0])
+            if tile_type[tile_being_scored[1]][tile_being_scored[0]] == "tgn":
+                del tts_copy[:]
+
+                add_score = score_cell(tile_being_scored, tile_score)
+                game_score += add_score
+                print("adding score: ", add_score)
+                tiles_to_score.remove(tiles_to_score[0])
+
+                for neighbor in game_tile.find_neighbors():
+                    tts_copy.append(neighbor)
+                tiles_to_score = copy.deepcopy(tts_copy)
+                print(tiles_to_score, "tiles to score")
         game_generations -= 1
-        for row_number, row_score, row_type, row_index in zip(tile_number, tile_score, tile_type, tile_index):
-            for t_number, t_score, t_type, t_index in zip(row_number, row_score, row_type, row_index):
-                #put tile type into score round
-                pass
-    
+        print("end of gen")
+        if len(tiles_to_score) < 1:
+            game_generations = 0
+
+
     return game_score, game_charges
 
 
-    #create tile fron class sa first thing, create array of each tile effected by last round (first round just defaults to the numbers from ball) then run each tile separately from array and put each tile affected into the array and repeat until generations are used up
+    #create tile from class as first thing, create array of each tile effected by last round (first round just defaults to the numbers from ball) then run each tile separately from array and put each tile affected into the array and repeat until generations are used up
     '''
     if end_of_round:
         if user_input.lower() == "ro":
@@ -316,9 +343,7 @@ class Trigger_Tiles:
         ]
         neighbor_locations = []
         for neighbor in neighbors:
-            add_layer = []
-            add_layer.append(find_cell(neighbor, 0, False))
-            neighbor_locations.append(add_layer)
+            neighbor_locations.append(find_cell(neighbor, 0, False))
 
         return neighbor_locations
 
@@ -375,9 +400,9 @@ while not game_end:
     charges = new_charges
 
         # output
-    print("charges: ", charges)
+    #print("charges: ", charges)
     display_board(cell_letter, cell_number, cell_score, cell_index)
-    print("deck ", bingo_deck, "discard ", bingo_discard)
+    #print("deck ", bingo_deck, "discard ", bingo_discard)
     print("score ", score)
     print()
 
