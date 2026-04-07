@@ -202,7 +202,7 @@ def find_cell(numbers, roll, triggered_yn):
         return triggered_cells
     else:
         #take index round down to multiple of 5 subtract that from original to get remainder (eg 21 becomes 20 21-20 = 1 getting 20 and 1) divide 20 by 5 and that gives y value | remainder gives x value
-        # this is to find a number's coordinates from its index, so I am using the "numbers" parameter as index
+        # multipurposing to find a number's coordinates from its index, so I am using the "numbers" parameter as index
         triggered_cells = []
         tens = math.floor(numbers / 5) * 5
         cell_input = []
@@ -210,6 +210,7 @@ def find_cell(numbers, roll, triggered_yn):
         cell_input.append(numbers-tens)
         return cell_input
 
+# finds the score of a tile from its coordinates
 def score_cell(cell_yx, tile_scores):
     score = 0
     cell_x = 0
@@ -229,6 +230,65 @@ def score_cell(cell_yx, tile_scores):
         index_y += 1
     
     return score
+
+def play_out_round(user, tile_number, tile_score, tile_type, tile_index, game_score, game_charges):
+    end_of_round = True
+    game_generations = 5
+
+
+
+    if end_of_round:
+        if user.lower() == "ro":
+            round_roll = game_roll()
+            print("Rolled: ", round_roll) 
+        elif user.lower() == "re":
+            deck_reroll()
+            game_score -= round(score*0.1)
+        elif user.lower() == "sh":
+            pass
+    end_of_round = False
+    
+    while not end_of_round and game_generations > 0:
+        tile_coords = find_cell(tile_number, round_roll, True)
+        score_round = score_cell(tile_coords, tile_score)
+        game_score += score_round
+        game_charges -= 1
+        game_generations -= 1
+        for row_number, row_score, row_type, row_index in zip(tile_number, tile_score, tile_type, tile_index):
+            for t_number, t_score, t_type, t_index in zip(row_number, row_score, row_type, row_index):
+                #put tile type into score round
+                pass
+    
+    return game_score, game_charges
+
+
+    #create tile fron class sa first thing, create array of each tile effected by last round (first round just defaults to the numbers from ball) then run each tile separately from array and put each tile affected into the array and repeat until generations are used up
+    '''
+    if end_of_round:
+        if user_input.lower() == "ro":
+            round_roll = game_roll()
+            print("Rolled: ", round_roll) 
+            triggered_cells_yx = find_cell(cell_number, round_roll, True)
+            score_round = score_cell(triggered_cells_yx, cell_score)
+            score += score_round
+            charges -= 1
+        elif user_input.lower() == "re":
+            deck_reroll()
+            score -= round(score*0.1)
+        elif user_input.lower() == "sh":
+            show_shop = True
+    end_of_round = False
+    
+    while not end_of_round:
+        for cell in triggered_cells_yx:
+            test_tile = Trigger_Tiles(cell_type, cell_index, cell_number, cell[1], cell[0])
+            print("neighbors: ", test_tile.find_neighbors())
+            for neighbor in test_tile.find_neighbors():
+                add_score = score_cell(neighbor, cell_score)
+                score += add_score
+                print("adding score: ", add_score, neighbor)
+            end_of_round = True
+    '''
 
 # classes
 class Trigger_Tiles:
@@ -270,13 +330,13 @@ num_rows = int(input("number of rows: >>\t"))
 # num_rows = 5 #num rows can be increased to extend board downward num cols can not, things break
 num_cols = 5
 
-charges = 15
+charges = 150
 bingo_discard = []
+round_generations = 5
 
 alive = "x"
 dead = "."
 
-end_of_round = True
 game_end = False
 show_shop = False
 
@@ -289,12 +349,12 @@ cell_letter, cell_number, cell_score, cell_addons, cell_type, bingo_deck, cell_i
 #for generation in range(0, 5):
 while not game_end:
         # input
-    if end_of_round:
-        user_input = game_interaction(score)
+    
+    user_input = game_interaction(score)
 
         # update
 
-    if charges <= 0:
+    if charges <= 1:
         game_end = True
     # create a copy of grid
     grid_copy = copy.deepcopy(grid)
@@ -310,38 +370,16 @@ while not game_end:
             #update cell state
             grid[y][x] = update_cell(grid_copy[y][x], alive_neighbors)
 
-    if end_of_round:
-        if user_input.lower() == "ro":
-            round_roll = game_roll()
-            print("Rolled: ", round_roll) 
-            triggered_cells_yx = find_cell(cell_number, round_roll, True)
-            score_round = score_cell(triggered_cells_yx, cell_score)
-            score += score_round
-            charges -= 1
-        elif user_input.lower() == "re":
-            deck_reroll()
-            score -= round(score*0.1)
-        elif user_input.lower() == "sh":
-            show_shop = True
-    end_of_round = False
-    
-    while not end_of_round:
-        for cell in triggered_cells_yx:
-            test_tile = Trigger_Tiles(cell_type, cell_index, cell_number, cell[1], cell[0])
-            print("neighbors: ", test_tile.find_neighbors())
-            for neighbor in test_tile.find_neighbors():
-                add_score = score_cell(neighbor, cell_score)
-                score += add_score
-                print("adding score: ", add_score, neighbor)
-            end_of_round = True
+    new_score, new_charges = play_out_round(user_input, cell_number, cell_score, cell_type, cell_index, score, charges)
+    score = new_score
+    charges = new_charges
+
         # output
     print("charges: ", charges)
     display_board(cell_letter, cell_number, cell_score, cell_index)
     print("deck ", bingo_deck, "discard ", bingo_discard)
     print("score ", score)
     print()
-    
-    #print(tile_test.find_neighbors())
 
     time.sleep(0)
 
@@ -357,9 +395,10 @@ game loop:
 
 bingo numbers will be drawn until empty, then will be reshuffled
 bingo balls only have numbers, not letters, tile letters are used for tile abilities to combo
-tiles can be activated or triggered: 
+tiles can be activated, triggered, or scored: 
     activated means the tile gives score and uses its effect
     triggered means the tile only uses its effect
+    scored means the tile only gives score
 
 tile types + code names:
     trigger 4/8 neighbors: tgn
