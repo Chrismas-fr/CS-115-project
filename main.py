@@ -8,6 +8,7 @@ import copy
 import time
 import random
 import math
+import os
 
 
 # functions
@@ -68,6 +69,8 @@ def create_cells(rows, cols):
         for x in range(0, cols):
             new_row.append(random_numbers[x + (y * 5)])
         number.append(new_row)
+    
+    print(number)
 
 
     # at game start, score is equal to the cell's number
@@ -84,16 +87,19 @@ def create_cells(rows, cols):
     for y in range(0, rows):
         new_row = []
         for x in range(0, cols):
-            new_row.append("tgn")
+            new_row.append("nor")
         tile_type.append(new_row)
 
     # ball numbers mean the deck that numbers are pulled from
     for num in random_numbers:
         entry = []
-        entry.append(num)
+        entry.append(35)
+        #change 35 to num
         entry.append("")
         bingo_numbers.append(entry)
     random.shuffle(bingo_numbers)
+
+    print(bingo_numbers)
 
     # a unique index for each tile for identification
     for y in range(0, rows):
@@ -102,17 +108,21 @@ def create_cells(rows, cols):
             new_row.append(x + (y * 5))
         tile_index.append(new_row)
 
+    tile_type[2][2] = "tgn"
+    number[2][2] = 35
+    print(number)
+
     return letter, number, score, addons, tile_type, bingo_numbers, tile_index
 
 
 
 
-def display_board(letters, numbers, scores, tile_indexes):
+def display_board(letters, numbers, scores, tile_indexes, types):
     # outer loop iterates rows
-    for row, row_num, row_score, row_index in zip(letters, numbers, scores, tile_indexes):
+    for row, row_num, row_score, row_index, row_type in zip(letters, numbers, scores, tile_indexes, types):
         # inner loop iterates columns
-        for letter, number, score, tile_index in zip(row, row_num, row_score, row_index):
-            print(f'[{letter} {number} {score} - {tile_index}]', end=" ")
+        for letter, number, score, tile_index, type in zip(row, row_num, row_score, row_index, row_type):
+            print(f'[{letter} {number} {score} - {tile_index} {type}]', end=" ")
         print()
 
 def count_neighbors(board, cur_x, cur_y):
@@ -240,7 +250,7 @@ def play_out_round(user, tile_number, tile_score, tile_type, tile_index, game_sc
     game_generations = 5
 
 
-
+    # at beginning of round, determines user input
     if end_of_round:
         if user.lower() == "ro":
             round_roll = game_roll()
@@ -252,39 +262,47 @@ def play_out_round(user, tile_number, tile_score, tile_type, tile_index, game_sc
             pass
     end_of_round = False
     
+    # finds all tiles that need to be scored
     tiles_to_score = find_cell(tile_number, round_roll, True)
     print(tiles_to_score, "tiles to score")
+    # creates copy
+    tts_copy = []
 
-    tts_copy = copy.deepcopy(tiles_to_score)
 
     while game_generations > 0:
         for tile_being_scored in tiles_to_score:
             print(tile_being_scored)
+
+            # creates a tile from the Trigger Tiles class for each tile to be scored
             game_tile = Trigger_Tiles(tile_type, tile_index, tile_number, tile_being_scored[1], tile_being_scored[0])
-            #print("neighbors ", game_tile.find_neighbors())
+            print("neighbors ", game_tile.find_neighbors())
             print("tile type ", tile_type[tile_being_scored[1]][tile_being_scored[0]])
             if tile_type[tile_being_scored[1]][tile_being_scored[0]] == "nor":
                 add_score = score_cell(tile_being_scored, tile_score)
                 game_score += add_score
                 print("adding score: ", add_score)
                 tiles_to_score.remove(tiles_to_score[0])
+
             if tile_type[tile_being_scored[1]][tile_being_scored[0]] == "tgn":
-                del tts_copy[:]
 
                 add_score = score_cell(tile_being_scored, tile_score)
                 game_score += add_score
                 print("adding score: ", add_score)
                 tiles_to_score.remove(tiles_to_score[0])
+                print("\t\t\t", tile_being_scored[1], tile_being_scored[0])
 
                 for neighbor in game_tile.find_neighbors():
                     tts_copy.append(neighbor)
+                print("\tall the neighbors: ", tts_copy)
                 tiles_to_score = copy.deepcopy(tts_copy)
                 print(tiles_to_score, "tiles to score")
+        del tts_copy[:]
         game_generations -= 1
-        print("end of gen")
+        #print("end of gen\n\n\n")
         if len(tiles_to_score) < 1:
             game_generations = 0
-
+        #print(game_generations, "geneeneratuibs")
+        time.sleep(0.5)
 
     return game_score, game_charges
 
@@ -400,13 +418,14 @@ while not game_end:
     charges = new_charges
 
         # output
+    
     #print("charges: ", charges)
-    display_board(cell_letter, cell_number, cell_score, cell_index)
+    #os.system("clear")
+    display_board(cell_letter, cell_number, cell_score, cell_index, cell_type)
     #print("deck ", bingo_deck, "discard ", bingo_discard)
     print("score ", score)
     print()
 
-    time.sleep(0)
 
 print(f"Game over! Your final score was: {score}")
 
