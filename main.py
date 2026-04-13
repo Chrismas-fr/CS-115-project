@@ -12,6 +12,8 @@ import os
 
 
 # functions
+
+# UNUSED /!\ /!\ --- creates a grid of cells
 def create_grid(rows, cols):
     board = []
     # outer loop iterates over rows
@@ -24,6 +26,7 @@ def create_grid(rows, cols):
 
     return board
 
+# creates all the starting attributes for each tile, and the deck of numbers
 def create_cells(rows, cols):
     letter = []
     number = []
@@ -70,7 +73,6 @@ def create_cells(rows, cols):
             new_row.append(random_numbers[x + (y * 5)])
         number.append(new_row)
     
-    print(number)
 
 
     # at game start, score is equal to the cell's number
@@ -93,13 +95,10 @@ def create_cells(rows, cols):
     # ball numbers mean the deck that numbers are pulled from
     for num in random_numbers:
         entry = []
-        entry.append(35)
-        #change 35 to num
+        entry.append(num)
         entry.append("")
         bingo_numbers.append(entry)
     random.shuffle(bingo_numbers)
-
-    print(bingo_numbers)
 
     # a unique index for each tile for identification
     for y in range(0, rows):
@@ -108,15 +107,9 @@ def create_cells(rows, cols):
             new_row.append(x + (y * 5))
         tile_index.append(new_row)
 
-    tile_type[2][2] = "tgn"
-    number[2][2] = 35
-    print(number)
-
     return letter, number, score, addons, tile_type, bingo_numbers, tile_index
 
-
-
-
+# displays each tile and its attributes
 def display_board(letters, numbers, scores, tile_indexes, types):
     # outer loop iterates rows
     for row, row_num, row_score, row_index, row_type in zip(letters, numbers, scores, tile_indexes, types):
@@ -125,6 +118,7 @@ def display_board(letters, numbers, scores, tile_indexes, types):
             print(f'[{letter} {number} {score} - {tile_index} {type}]', end=" ")
         print()
 
+# UNUSED /!\ /!\ --- counts neighbors of a cell
 def count_neighbors(board, cur_x, cur_y):
     row_num = len(board)
     col_num = len(board[0])
@@ -149,9 +143,11 @@ def count_neighbors(board, cur_x, cur_y):
 
     return neighbor_count
 
+# UNUSED /!\ /!\ --- does nothing
 def update_cell(cell, num_neighbors):
     pass
 
+# gets user input and sanitizes it
 def game_interaction(score):
     good_input = False
 
@@ -169,6 +165,7 @@ def game_interaction(score):
 
     return user
 
+# rolls and rerolls the deck
 def game_roll():
     roll = bingo_deck[0][0]
     # removes number from the deck and adds it to the discard only if there are still numbers in deck
@@ -180,11 +177,13 @@ def game_roll():
         deck_reroll()
     return roll
 
+# adding the draw and discard decks, then shuffles
 def deck_reroll():
     bingo_deck.extend(bingo_discard)
     del bingo_discard[:]
     random.shuffle(bingo_deck)
 
+# finds a cell based off of its number or index
 def find_cell(numbers, roll, triggered_yn):
     if triggered_yn:
         index_y = 0
@@ -245,9 +244,11 @@ def score_cell(cell_yx, tile_scores):
     
     return score
 
+# handles everything in a roll
 def play_out_round(user, tile_number, tile_score, tile_type, tile_index, game_score, game_charges):
     end_of_round = True
     game_generations = 5
+    round_roll = None
 
 
     # at beginning of round, determines user input
@@ -266,43 +267,49 @@ def play_out_round(user, tile_number, tile_score, tile_type, tile_index, game_sc
     tiles_to_score = find_cell(tile_number, round_roll, True)
     print(tiles_to_score, "tiles to score")
     # creates copy
-    tts_copy = []
-
+    tts_copy = copy.deepcopy(tiles_to_score)
 
     while game_generations > 0:
+        loops = 0
         for tile_being_scored in tiles_to_score:
             print(tile_being_scored)
 
+            # i need to remove the tile being scored after it is scored, but removing it from tiles_to_score messes with with the amount of times the for loop runs.
+            
             # creates a tile from the Trigger Tiles class for each tile to be scored
             game_tile = Trigger_Tiles(tile_type, tile_index, tile_number, tile_being_scored[1], tile_being_scored[0])
             print("neighbors ", game_tile.find_neighbors())
-            print("tile type ", tile_type[tile_being_scored[1]][tile_being_scored[0]])
+            
             if tile_type[tile_being_scored[1]][tile_being_scored[0]] == "nor":
                 add_score = score_cell(tile_being_scored, tile_score)
                 game_score += add_score
                 print("adding score: ", add_score)
-                tiles_to_score.remove(tiles_to_score[0])
+                print("tile type ", tile_type[tile_being_scored[1]][tile_being_scored[0]], "tile location ", tile_being_scored[0], tile_being_scored[1])
+                print(" the current tile being scored ", tiles_to_score[0])
+                tts_copy.remove(tts_copy[0])
+                print("rest of tiles to score", tiles_to_score)
 
             if tile_type[tile_being_scored[1]][tile_being_scored[0]] == "tgn":
-
                 add_score = score_cell(tile_being_scored, tile_score)
                 game_score += add_score
                 print("adding score: ", add_score)
-                tiles_to_score.remove(tiles_to_score[0])
+                tts_copy.remove(tts_copy[0])
                 print("\t\t\t", tile_being_scored[1], tile_being_scored[0])
 
                 for neighbor in game_tile.find_neighbors():
                     tts_copy.append(neighbor)
-                print("\tall the neighbors: ", tts_copy)
-                tiles_to_score = copy.deepcopy(tts_copy)
+                print("\tall the neighbors: ttscopy", tts_copy)
                 print(tiles_to_score, "tiles to score")
-        del tts_copy[:]
+            
+            loops += 1
+            print("loops", loops)
+        tiles_to_score = copy.deepcopy(tts_copy)
         game_generations -= 1
-        #print("end of gen\n\n\n")
+        print("end of gen\n\n\n")
         if len(tiles_to_score) < 1:
             game_generations = 0
-        #print(game_generations, "geneeneratuibs")
-        time.sleep(0.5)
+        print(game_generations, "generations")
+        #time.sleep(0.5)
 
     return game_score, game_charges
 
@@ -336,6 +343,8 @@ def play_out_round(user, tile_number, tile_score, tile_type, tile_index, game_sc
     '''
 
 # classes
+
+# a class that gives different functions for different types of tiles
 class Trigger_Tiles:
     def __init__(self, tile_type, tile_index, tile_number, cur_x, cur_y):
         self.tile_type = tile_type
@@ -369,8 +378,8 @@ class Trigger_Tiles:
 
 
 # ----- global variables -----
-num_rows = int(input("number of rows: >>\t"))
-# num_rows = 5 #num rows can be increased to extend board downward num cols can not, things break
+#num_rows = int(input("number of rows: >>\t"))
+num_rows = 5 #num rows can be increased to extend board downward num cols can not, things break
 num_cols = 5
 
 charges = 150
