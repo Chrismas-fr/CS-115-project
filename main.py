@@ -106,6 +106,7 @@ def create_cells(rows, cols):
         for x in range(0, cols):
             new_row.append(x + (y * 5))
         tile_index.append(new_row)
+    
 
     return letter, number, score, addons, tile_type, bingo_numbers, tile_index
 
@@ -265,47 +266,51 @@ def play_out_round(user, tile_number, tile_score, tile_type, tile_index, game_sc
     
     # finds all tiles that need to be scored
     tiles_to_score = find_cell(tile_number, round_roll, True)
-    print(tiles_to_score, "tiles to score")
+    #print(tiles_to_score, "tiles to score")
     # creates copy
     tts_copy = copy.deepcopy(tiles_to_score)
 
     while game_generations > 0:
-        loops = 0
         for tile_being_scored in tiles_to_score:
-            print(tile_being_scored)
+            #print(tile_being_scored)
 
             # i need to remove the tile being scored after it is scored, but removing it from tiles_to_score messes with with the amount of times the for loop runs.
             
-            # creates a tile from the Trigger Tiles class for each tile to be scored
+            # creates a tile from the Trigger Tiles class each loop
             game_tile = Trigger_Tiles(tile_type, tile_index, tile_number, tile_being_scored[1], tile_being_scored[0])
-            print("neighbors ", game_tile.find_neighbors())
+            #print("neighbors ", game_tile.find_neighbors())
             
+            # for basic tile type, scores the cell, adds the score, and removes it from the list of cells to score
             if tile_type[tile_being_scored[1]][tile_being_scored[0]] == "nor":
                 add_score = score_cell(tile_being_scored, tile_score)
                 game_score += add_score
-                print("adding score: ", add_score)
-                print("tile type ", tile_type[tile_being_scored[1]][tile_being_scored[0]], "tile location ", tile_being_scored[0], tile_being_scored[1])
-                print(" the current tile being scored ", tiles_to_score[0])
+                #print("adding score: ", add_score)
+                #print("tile type ", tile_type[tile_being_scored[1]][tile_being_scored[0]], "tile location ", tile_being_scored[0], tile_being_scored[1])
+                #print(" the current tile being scored ", tiles_to_score[0])
                 tts_copy.remove(tts_copy[0])
-                print("rest of tiles to score", tiles_to_score)
+                #print("rest of tiles to score", tiles_to_score)
+                #print(add_score)
 
+            # for trigger neighbors tile type, scores the cell, and adds all neighbors to tiles to score array
             if tile_type[tile_being_scored[1]][tile_being_scored[0]] == "tgn":
                 add_score = score_cell(tile_being_scored, tile_score)
                 game_score += add_score
-                print("adding score: ", add_score)
+                #print("adding score: ", add_score)
                 tts_copy.remove(tts_copy[0])
-                print("\t\t\t", tile_being_scored[1], tile_being_scored[0])
+                #print("\t\t\t", tile_being_scored[1], tile_being_scored[0])
 
                 for neighbor in game_tile.find_neighbors():
                     tts_copy.append(neighbor)
-                print("\tall the neighbors: ttscopy", tts_copy)
-                print(tiles_to_score, "tiles to score")
+                #print("\tall the neighbors: ttscopy", tts_copy)
+                #print(tiles_to_score, "tiles to score")
+                #print(add_score, end=", ")
             
-            loops += 1
-            print("loops", loops)
+        # converts the main array into the copy (changing the main array while iterating causes problems, using a copy is a workaround)
         tiles_to_score = copy.deepcopy(tts_copy)
+
         game_generations -= 1
         print("end of gen\n\n\n")
+        #stops the round if theres nothing left to do
         if len(tiles_to_score) < 1:
             game_generations = 0
         print(game_generations, "generations")
@@ -368,6 +373,8 @@ class Trigger_Tiles:
             self.tile_index[self.cur_y][left],                                  self.tile_index[self.cur_y][right],
                                               self.tile_index[below][self.cur_x]                     
         ]
+        
+        # finds the coordinates of each neighbor from their index
         neighbor_locations = []
         for neighbor in neighbors:
             neighbor_locations.append(find_cell(neighbor, 0, False))
@@ -429,7 +436,6 @@ while not game_end:
         # output
     
     #print("charges: ", charges)
-    #os.system("clear")
     display_board(cell_letter, cell_number, cell_score, cell_index, cell_type)
     #print("deck ", bingo_deck, "discard ", bingo_discard)
     print("score ", score)
@@ -470,7 +476,7 @@ addon types + code names: (additive means can be added to a tile multiple times)
     chance traits are 20x% more likely (additave): xch
     adds flat score to tile: scr
 
-deck addons:
+deck addons + code names:
     doesn't consume charges: crg
     %chance to add charges: adc
     activates 1 random tile with different number: rnd
