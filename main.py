@@ -89,7 +89,7 @@ def create_cells(rows, cols):
     for y in range(0, rows):
         new_row = []
         for x in range(0, cols):
-            new_row.append("nor")
+            new_row.append("tgn")
         tile_type.append(new_row)
 
     # ball numbers mean the deck that numbers are pulled from
