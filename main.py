@@ -149,20 +149,27 @@ def update_cell(cell, num_neighbors):
     pass
 
 # gets user input and sanitizes it
-def game_interaction(score):
+def game_interaction(score, input_type):
     good_input = False
 
     while not good_input:
-        
-        user = input("ro for roll | re to refresh deck | sh to open shop\n")
+        if input_type == "begin":
+            user = input("ro for roll | re to refresh deck | sh to open shop\n >>\t").lower()
 
-        if not user == "ro" and not user == "re" and not user == "sh":
-            print("Not a valid input, use one of the options.")
-        elif user == "re" and score < 100:
-            print("You need at least 100 score to refresh.")
-        else:
-            good_input = True
+            if not user == "ro" and not user == "re" and not user == "sh":
+                print("Not a valid input, use one of the options.")
+            elif user == "re" and score < 100:
+                print("You need at least 100 score to refresh.")
+            else:
+                good_input = True
 
+        elif input_type == "shop":
+            user = input("Would you like to purchase an item? y/n\n >>\t").lower()
+
+            if len(user) != 1 and not user == "y" and not user == "n":
+                print("Not a valid input, use one of the options.")
+            else:
+                good_input = True
 
     return user
 
@@ -245,6 +252,35 @@ def score_cell(cell_yx, tile_scores):
     
     return score
 
+# determines what items show up in the shop
+def roll_shop(upgrades_list, addons_list, tiles_list):
+    upgrades = []
+    addons = []
+    tiles = []
+
+    for item in range(1, 5):
+        if item < 4:
+            upgrades.append(random.choice(upgrades_list))
+            tiles.append(random.choice(tiles_list))
+        addons.append(random.choice(addons_list))
+
+    return upgrades, addons, tiles
+
+# handles shop interactions
+def open_shop():
+    upgrades, addons, tiles = roll_shop(possible_balls, possible_addons, possible_tiles)
+
+    print("Deck Upgrades: ", upgrades)
+    print("Tile Addons, ", addons)
+    print("New Tiles, ", tiles)
+
+    user_input = game_interaction(None, "shop")
+
+    if user_input == "n":
+        show_shop = False
+    elif user_input == "y":
+        pass
+
 # handles everything in a roll
 def play_out_round(user, tile_number, tile_score, tile_type, tile_index, game_score, game_charges):
     end_of_round = True
@@ -257,11 +293,13 @@ def play_out_round(user, tile_number, tile_score, tile_type, tile_index, game_sc
         if user.lower() == "ro":
             round_roll = game_roll()
             print("Rolled: ", round_roll) 
+            game_charges -= 1
         elif user.lower() == "re":
             deck_reroll()
             game_score -= round(score*0.1)
         elif user.lower() == "sh":
-            pass
+            show_shop = True
+            open_shop()
     end_of_round = False
     
     # finds all tiles that need to be scored
@@ -309,11 +347,11 @@ def play_out_round(user, tile_number, tile_score, tile_type, tile_index, game_sc
         tiles_to_score = copy.deepcopy(tts_copy)
 
         game_generations -= 1
-        print("end of gen\n\n\n")
+        #print("end of gen\n\n\n")
         #stops the round if theres nothing left to do
         if len(tiles_to_score) < 1:
             game_generations = 0
-        print(game_generations, "generations")
+        #print(game_generations, "generations")
         #time.sleep(0.5)
 
     return game_score, game_charges
@@ -389,7 +427,8 @@ class Trigger_Tiles:
 num_rows = 5 #num rows can be increased to extend board downward num cols can not, things break
 num_cols = 5
 
-charges = 150
+starting_charges = 10
+charges = copy.deepcopy(starting_charges)
 bingo_discard = []
 round_generations = 5
 
@@ -398,6 +437,10 @@ dead = "."
 
 game_end = False
 show_shop = False
+
+possible_balls = ["nor"]
+possible_addons = ["nor"]
+possible_tiles = ["nor", "tgn"]
 
 score = 0
 
@@ -409,7 +452,7 @@ cell_letter, cell_number, cell_score, cell_addons, cell_type, bingo_deck, cell_i
 while not game_end:
         # input
     
-    user_input = game_interaction(score)
+    user_input = game_interaction(score, "begin")
 
         # update
 
@@ -435,10 +478,10 @@ while not game_end:
 
         # output
     
-    #print("charges: ", charges)
     display_board(cell_letter, cell_number, cell_score, cell_index, cell_type)
     #print("deck ", bingo_deck, "discard ", bingo_discard)
     print("score ", score)
+    print("charges: ", charges)
     print()
 
 
@@ -499,4 +542,6 @@ deck classes:
     adds a multiplier: rsc, pml
 
 to add a pre game settings menu make a separate file that writes to the file that main reads from
+
+add system for saving shop state until refresh
 '''
