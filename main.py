@@ -10,7 +10,6 @@ import random
 import math
 import os
 
-
 # functions
 
 # UNUSED /!\ /!\ --- creates a grid of cells
@@ -89,7 +88,7 @@ def create_cells(rows, cols):
     for y in range(0, rows):
         new_row = []
         for x in range(0, cols):
-            new_row.append("tgn")
+            new_row.append("nor")
         tile_type.append(new_row)
 
     # ball numbers mean the deck that numbers are pulled from
@@ -106,7 +105,6 @@ def create_cells(rows, cols):
         for x in range(0, cols):
             new_row.append(x + (y * 5))
         tile_index.append(new_row)
-    
 
     return letter, number, score, addons, tile_type, bingo_numbers, tile_index
 
