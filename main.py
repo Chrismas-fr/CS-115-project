@@ -151,6 +151,7 @@ def game_interaction(score, input_type):
     good_input = False
 
     while not good_input:
+        # sanitization for beginning of round
         if input_type == "begin":
             user = input("ro for roll | re to refresh deck | sh to open shop\n >>\t").lower()
 
@@ -161,6 +162,7 @@ def game_interaction(score, input_type):
             else:
                 good_input = True
 
+        # sanitization for opening the shop
         elif input_type == "shop":
             user = input("Would you like to purchase an item? y/n\n >>\t").lower()
 
@@ -168,6 +170,19 @@ def game_interaction(score, input_type):
                 print("Not a valid input, use one of the options.")
             else:
                 good_input = True
+
+        # sanitization for purchasing an item from the shop
+        elif input_type == "buy":
+            user = input("Which item would you like to buy?\n >>\t").lower()
+
+            if user in "0123456":
+                print("Not available to be purchaced yet.")
+            elif not user in "789" or len(user) != 1:
+                print("Not a valid input.")
+            else:
+                good_input = True
+
+
 
     return user
 
@@ -267,17 +282,27 @@ def roll_shop(upgrades_list, addons_list, tiles_list):
 # handles shop interactions
 def open_shop():
     upgrades, addons, tiles = roll_shop(possible_balls, possible_addons, possible_tiles)
+    price_coefficient = 1
 
-    print("Deck Upgrades: ", upgrades)
-    print("Tile Addons, ", addons)
-    print("New Tiles, ", tiles)
+    print("Deck Upgrades:")
+    for index, upgrade in enumerate(upgrades):
+        print(f"\t Upgrade {index + 1}: {upgrade[0]} | price: {upgrade[1] * price_coefficient} points")
+
+    print("Tile Addons:")
+    for index, addon in enumerate(addons):
+        print(f"\t Addon {index + 1}: {addon[0]} | price: {addon[1] * price_coefficient} points")
+        
+    print("Deck Upgrades:")
+    for index, tile in enumerate(tiles):
+        print(f"\t Tile {index + 1}: {tile[0]} | price: {tile[1]* price_coefficient} points")
 
     user_input = game_interaction(None, "shop")
 
     if user_input == "n":
         show_shop = False
+        return
     elif user_input == "y":
-        pass
+        user_input = (game_interaction(None, "buy"))
 
 # handles everything in a roll
 def play_out_round(user, tile_number, tile_score, tile_type, tile_index, game_score, game_charges):
@@ -425,7 +450,7 @@ class Trigger_Tiles:
 num_rows = 5 #num rows can be increased to extend board downward num cols can not, things break
 num_cols = 5
 
-starting_charges = 10
+starting_charges = 100
 charges = copy.deepcopy(starting_charges)
 bingo_discard = []
 round_generations = 5
@@ -436,9 +461,9 @@ dead = "."
 game_end = False
 show_shop = False
 
-possible_balls = ["nor"]
-possible_addons = ["nor"]
-possible_tiles = ["nor", "tgn"]
+possible_balls = [["nor", 1000]]
+possible_addons = [["nor", 500]]
+possible_tiles = [["nor", 400], ["tgn", 750]]
 
 score = 0
 
