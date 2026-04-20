@@ -75,7 +75,7 @@ def create_cells(rows, cols):
 
 
     # at game start, score is equal to the cell's number
-    score = number
+    score = copy.deepcopy(number)
 
     # setting a 2d list of addons for tiles (none when game starts)
     for y in range(0, rows):
@@ -174,61 +174,45 @@ def game_interaction(score, input_type):
 
         # sanitization for first phase of buying
         elif input_type == "buy1":
-            user = input("1 for upgrades | 2 for addons | 3 for tiles\n >>\t")
+            user = int(input("1 for upgrades | 2 for addons | 3 for tiles\n >>\t"))
 
-            if len(user) != 1 or user not in "123":
+            if len(str(user)) != 1 or str(user) not in "123":
                 print("Not a valid input, use one of the options.")
             else:
                 good_input = True
 
         # sanitization for second phase of buying (if buying upgrades or tiles)
         elif input_type == "buy2a":
-            user = input("input the number of the item you want to purchace\n >>\t")
+            user = int(input("input the number of the item you want to purchace\n >>\t"))
 
-            if len(user) != 1 or not user in "1234":
+            if len(str(user)) != 1 or not str(user) in "1234":
                 print("Not a valid input, enter the number corresponding to the item")
             else:
                 good_input = True
                 
-        # sanitization for second phase of buying (if buying upgrades or tiles)
+        # sanitization for second phase of buying (if buying addons)
         elif input_type == "buy2b":
-            user = input("input the number of the item you want to purchace\n >>\t")
+            user = int(input("input the number of the item you want to purchace\n >>\t"))
 
-            if len(user) != 1 or not user in "12345":
+            if len(str(user)) != 1 or not str(user) in "12345":
                 print("Not a valid input, enter the number corresponding to the item")
             else:
                 good_input = True
-        '''
-        # snitization for buying an item
-        elif input_type == "buy":
-            good_input1 = False
 
-            while not good_input1:
-                user1 = input("1 for upgrades | 2 for addons | 3 for tiles\n >>\t")
+        # sanitization for adding a new tile to the board (index)
+        elif input_type == "tile":
+            user = int(input("enter the index of the tile you want to replace\n >>\t"))
 
-                if (len(user1) != 1 and not user1 in "123") or user1 == "":
-                    print("Not a valid input, use one of the options.")
-                else:
-                    good_input1 = True
+            bad_letter = 0
+            for letter in str(user):
+                if letter not in "1234567890":
+                    bad_letter += 1
             
-            good_input2 = False
-
-            while not good_input2:
-                user2 = input("input the number of the item you want to purchace\n >>\t")
-
-                if user1 == 2:
-                    if (len(user2) != 1 and not user2 in "12345") or user2 == "":
-                        print("Not a valid input, enter the number corresponding to the item")
-                    else:
-                        good_input2 = True
-                else:
-                    if (len(user2) != 1 and not user2 in "1234") or user2 == "":
-                        print("Not a valid input, enter the number corresponding to the item")
-                    else:
-                        good_input2 = True
+            if bad_letter == 0:
                 good_input = True
+            else:
+                print("Not a valid input.")
 
-            '''
     return user
 
 # rolls and rerolls the deck
@@ -315,6 +299,7 @@ def roll_shop(upgrades_list, addons_list, tiles_list):
     upgrades = []
     addons = []
     tiles = []
+    letters = ['B', 'I', 'N', 'G', 'O']
 
     for item in range(1, 6):
         if item < 5:
@@ -326,12 +311,21 @@ def roll_shop(upgrades_list, addons_list, tiles_list):
             new_upgrade[1] = math.floor(new_upgrade[1] * (random.randint(8750, 11250) / 10000))
             upgrades.append(new_upgrade)
 
+
             new_tile = []
             tile_index = random.randint(0, len(tiles_list)-1)
             for tile in tiles_list[tile_index]:
                 new_tile.append(tile)
             new_tile[1] = math.floor(new_tile[1] * (random.randint(8750, 11250) / 10000))
+            # gives the new tile a letter, score, and number
+            new_tile.append(random.choice(letters))
+            new_tile.append(random.randint(1,90))
+            new_tile.append(random.randint(1,75))
+
             tiles.append(new_tile)
+
+
+
         new_addon = []
         addon_index = random.randint(0, len(addons_list)-1)
         for addon in addons_list[addon_index]:
@@ -367,7 +361,7 @@ def open_shop(upgrades, addons, tiles):
         for number in possible_tiles:
             weight += number[2]
         chance = (100*tile[2]) / weight
-        print(f"\t Tile {index + 1}: {tile[0]} | price: {tile[1]* price_coefficient} points | chance of dropping: {round(chance)}")
+        print(f"\t Tile {index + 1}: {tile[0]} | price: {tile[1]* price_coefficient} points | chance of dropping: {round(chance)} | letter: {tile[3]} | score: {tile[4]} | number: {tile[5]}")
 
     user_input = game_interaction(None, "shop")
 
@@ -377,15 +371,34 @@ def open_shop(upgrades, addons, tiles):
         global available_upgrades, available_addons, available_tiles
         available_upgrades, available_addons, available_tiles = roll_shop(weighted_balls, weighted_addons, weighted_tiles)
     elif user_input == "b":
-        user_inputy = game_interaction(None, "buy1")
-
-        if int(user_inputy) == 2:
-            user_inputx = game_interaction(None, "buy2b")
-        else:
-            user_inputx = game_interaction(None, "buy2a")
+        buy_tile(tiles)
     
     return True
 
+def buy_tile(shop_tiles):
+    new_y = game_interaction(None, "buy1")
+
+    if int(new_y) == 2:
+        new_x = game_interaction(None, "buy2b")
+    else:
+        new_x = game_interaction(None, "buy2a")
+
+    user_input = game_interaction(None, "tile")
+
+    old_tile = find_cell(user_input, 0, False)
+    #print(old_tile, "old tile")
+
+    global cell_type
+    cell_type[old_tile[0]][old_tile[1]] = shop_tiles[new_x-1][0]
+    cell_letter[old_tile[0]][old_tile[1]] = shop_tiles[new_x-1][3]
+    cell_score[old_tile[0]][old_tile[1]] = shop_tiles[new_x-1][4]
+    cell_number[old_tile[0]][old_tile[1]] = shop_tiles[new_x-1][5]
+    #print(shop_tiles[new_x-1][0], new_x, shop_tiles)
+
+    #add pricing for shop items
+    #remove item after being purchased
+
+    
 
 # handles everything in a roll
 def play_out_round(user, tile_number, tile_score, tile_type, tile_index, game_score, game_charges):
