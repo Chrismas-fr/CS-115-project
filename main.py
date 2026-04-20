@@ -2,6 +2,7 @@
 Christopher Berkowitz
 Python final project
 Bingo roguelike game
+4/20/26
 '''
 
 import copy
@@ -147,8 +148,9 @@ def update_cell(cell, num_neighbors):
     pass
 
 # gets user input and sanitizes it
-def game_interaction(score, input_type):
+def game_interaction(game_score, input_type, price_coe):
     good_input = False
+    global score
 
     while not good_input:
         # sanitization for beginning of round
@@ -157,7 +159,7 @@ def game_interaction(score, input_type):
 
             if not user == "ro" and not user == "re" and not user == "sh":
                 print("Not a valid input, use one of the options.")
-            elif user == "re" and score < 100:
+            elif user == "re" and game_score < 100:
                 print("You need at least 100 score to refresh.")
             else:
                 good_input = True
@@ -181,23 +183,47 @@ def game_interaction(score, input_type):
             else:
                 good_input = True
 
-        # sanitization for second phase of buying (if buying upgrades or tiles)
+        # sanitization for second phase of buying (if buying upgrades)
         elif input_type == "buy2a":
-            user = int(input("input the number of the item you want to purchace\n >>\t"))
+            user = int(input("input the number of the item you want to purchace, or 0 to exit.\n >>\t"))
 
-            if len(str(user)) != 1 or not str(user) in "1234":
+            if len(str(user)) != 1 or not str(user) in "12340":
                 print("Not a valid input, enter the number corresponding to the item")
+            elif user == 0:
+                good_input = True
+            elif (available_upgrades[user-1][1] * price_coe) > game_score:
+                print(f"You don't have enough money to purchace this item, you need {available_upgrades[user-1][1] * price_coe}, you have {game_score}.")
             else:
                 good_input = True
+                score = score - (available_upgrades[user-1][1] * price_coe)
                 
         # sanitization for second phase of buying (if buying addons)
         elif input_type == "buy2b":
-            user = int(input("input the number of the item you want to purchace\n >>\t"))
+            user = int(input("input the number of the item you want to purchace, or 0 to exit.\n >>\t"))
 
-            if len(str(user)) != 1 or not str(user) in "12345":
+            if len(str(user)) != 1 or not str(user) in "123450":
                 print("Not a valid input, enter the number corresponding to the item")
+            elif user == 0:
+                good_input = True
+            elif (available_addons[user-1][1] * price_coe) > game_score:
+                print(f"You don't have enough money to purchace this item, you need {available_addons[user-1][1] * price_coe}, you have {game_score}.")
             else:
                 good_input = True
+                score = score - (available_addons[user-1][1] * price_coe)
+
+        # sanitization for second phase of buying (if buying upgrades)
+        elif input_type == "buy2c":
+            user = int(input("input the number of the item you want to purchace, or 0 to exit.\n >>\t"))
+
+            if len(str(user)) != 1 or not str(user) in "12340":
+                print("Not a valid input, enter the number corresponding to the item")
+            elif user == 0:
+                good_input = True
+            elif (available_tiles[user-1][1] * price_coe) > game_score:
+                print(f"You don't have enough money to purchace this item, you need {available_tiles[user-1][1] * price_coe}, you have {game_score}.")
+            else:
+                good_input = True
+                score = score - (available_tiles[user-1][1] * price_coe)
 
         # sanitization for adding a new tile to the board (index)
         elif input_type == "tile":
@@ -362,8 +388,7 @@ def open_shop(upgrades, addons, tiles):
             weight += number[2]
         chance = (100*tile[2]) / weight
         print(f"\t Tile {index + 1}: {tile[0]} | price: {tile[1]* price_coefficient} points | chance of dropping: {round(chance)} | letter: {tile[3]} | score: {tile[4]} | number: {tile[5]}")
-
-    user_input = game_interaction(None, "shop")
+    user_input = game_interaction(None, "shop", None)
 
     if user_input == "e":
         return False
@@ -371,40 +396,54 @@ def open_shop(upgrades, addons, tiles):
         global available_upgrades, available_addons, available_tiles
         available_upgrades, available_addons, available_tiles = roll_shop(weighted_balls, weighted_addons, weighted_tiles)
     elif user_input == "b":
-        buy_tile(tiles)
+        buy_tile(tiles, addons, upgrades, price_coefficient)
+
+    
     
     return True
 
-def buy_tile(shop_tiles):
-    new_y = game_interaction(None, "buy1")
+# prompts the user for what they buy, and replaces the item
+def buy_tile(shop_tiles, shop_addons, shop_upgrades, price_coe):
+    new_y = game_interaction(None, "buy1", None)
+    global score
 
-    if int(new_y) == 2:
-        new_x = game_interaction(None, "buy2b")
-    else:
-        new_x = game_interaction(None, "buy2a")
+    if int(new_y) == 1:
+        new_x = game_interaction(score, "buy2a", price_coe)
+    elif int(new_y) == 2:
+        new_x = game_interaction(score, "buy2b", price_coe)
+    elif int(new_y) == 3:
+        new_x = game_interaction(score, "buy2c", price_coe)
+    
+    # stops the function if user returned 0
+    if int(new_x) == 0:
+        return
 
-    user_input = game_interaction(None, "tile")
+    user_input = game_interaction(None, "tile", None)
 
     old_tile = find_cell(user_input, 0, False)
     #print(old_tile, "old tile")
 
+    # replacing the data for the tilee
     global cell_type
     cell_type[old_tile[0]][old_tile[1]] = shop_tiles[new_x-1][0]
     cell_letter[old_tile[0]][old_tile[1]] = shop_tiles[new_x-1][3]
     cell_score[old_tile[0]][old_tile[1]] = shop_tiles[new_x-1][4]
     cell_number[old_tile[0]][old_tile[1]] = shop_tiles[new_x-1][5]
+
+    #removing the purchaced tile from the shop
+    del shop_tiles[new_x-1]
+
     #print(shop_tiles[new_x-1][0], new_x, shop_tiles)
 
     #add pricing for shop items
-    #remove item after being purchased
-
-    
 
 # handles everything in a roll
-def play_out_round(user, tile_number, tile_score, tile_type, tile_index, game_score, game_charges):
+def play_out_round(user, tile_number, tile_score, tile_type, tile_index):
     end_of_round = True
     game_generations = 5
     round_roll = None
+    global score
+    global charges
 
 
     # at beginning of round, determines user input
@@ -412,10 +451,10 @@ def play_out_round(user, tile_number, tile_score, tile_type, tile_index, game_sc
         if user.lower() == "ro":
             round_roll = game_roll()
             print("Rolled: ", round_roll) 
-            game_charges -= 1
+            charges -= 1
         elif user.lower() == "re":
             deck_reroll()
-            game_score -= round(score*0.1)
+            score -= round(score*0.1)
         elif user.lower() == "sh":
             show_shop = True
             while show_shop == True:
@@ -441,7 +480,7 @@ def play_out_round(user, tile_number, tile_score, tile_type, tile_index, game_sc
             # for basic tile type, scores the cell, adds the score, and removes it from the list of cells to score
             if tile_type[tile_being_scored[1]][tile_being_scored[0]] == "nor":
                 add_score = score_cell(tile_being_scored, tile_score)
-                game_score += add_score
+                score += add_score
                 #print("adding score: ", add_score)
                 #print("tile type ", tile_type[tile_being_scored[1]][tile_being_scored[0]], "tile location ", tile_being_scored[0], tile_being_scored[1])
                 #print(" the current tile being scored ", tiles_to_score[0])
@@ -452,7 +491,7 @@ def play_out_round(user, tile_number, tile_score, tile_type, tile_index, game_sc
             # for trigger neighbors tile type, scores the cell, and adds all neighbors to tiles to score array
             if tile_type[tile_being_scored[1]][tile_being_scored[0]] == "tgn":
                 add_score = score_cell(tile_being_scored, tile_score)
-                game_score += add_score
+                score += add_score
                 #print("adding score: ", add_score)
                 tts_copy.remove(tts_copy[0])
                 #print("\t\t\t", tile_being_scored[1], tile_being_scored[0])
@@ -473,8 +512,6 @@ def play_out_round(user, tile_number, tile_score, tile_type, tile_index, game_sc
             game_generations = 0
         #print(game_generations, "generations")
         #time.sleep(0.5)
-
-    return game_score, game_charges
 
 
     #create tile from class as first thing, create array of each tile effected by last round (first round just defaults to the numbers from ball) then run each tile separately from array and put each tile affected into the array and repeat until generations are used up
@@ -590,7 +627,7 @@ available_upgrades, available_addons, available_tiles = roll_shop(weighted_balls
 while not game_end:
         # input
     
-    user_input = game_interaction(score, "begin")
+    user_input = game_interaction(score, "begin", None)
 
         # update
 
@@ -610,9 +647,8 @@ while not game_end:
             #update cell state
             grid[y][x] = update_cell(grid_copy[y][x], alive_neighbors)
 
-    new_score, new_charges = play_out_round(user_input, cell_number, cell_score, cell_type, cell_index, score, charges)
-    score = new_score
-    charges = new_charges
+    play_out_round(user_input, cell_number, cell_score, cell_type, cell_index)
+
 
         # output
     
