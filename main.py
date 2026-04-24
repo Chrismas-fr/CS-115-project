@@ -164,9 +164,9 @@ def game_interaction(game_score, input_type, price_coe):
     while not good_input:
         # sanitization for beginning of round
         if input_type == "begin":
-            user = input("ro for roll | re to refresh deck | sh to open shop\n >>\t").lower()
+            user = input("ro for roll | re to refresh deck | sh to open shop | he for item help\n >>\t").lower()
 
-            if not user == "ro" and not user == "re" and not user == "sh":
+            if not user == "ro" and not user == "re" and not user == "sh" and not user == "he":
                 print("Not a valid input, use one of the options.")
             elif user == "re" and game_score < 100:
                 print("You need at least 100 score to refresh.")
@@ -329,6 +329,38 @@ def score_cell(cell_xy, tile_scores):
         index_y += 1
     return score
 
+def item_help():
+    print("\nItem Help tells you the exact effects of each item in the game!")
+
+    print("\nDeck Upgrades:")
+    print("\tnor type upgrades: The default upgrade type, has no effect\n")
+    print("\tcrg type upgrades: Doesn't consume charges when rolled\n")
+    print("\tadc type upgrades: Adds a certain amount of charges based on random chance:\n\t\t60% to do nothing\n\t\t17.5% to add 1\n\t\t12.5% to add 2\n\t\t5% to add 4\n\t\t4.5% to add 10\n\t\t0.5% to add 25\n")
+    print("\trnd type upgrades: Triggers one additional tile\n")
+    print("\ttrg type upgrades: 25% chance to trigger 10 additional tiles\n")
+    print("\trsc type upgrades: Adds temporary 20% to the round score\n")
+    print("\tpml type upgrades: 35% chance to add a permanent 12% multiplier to all tiles\n")
+    print("\taat type upgrades: 5% chance to additionally trigger all tiles\n")
+
+    print("\nTile Types:")
+    print("\tnor type tiles: The default tile type, has no effect\n")
+    print("\ttgn type tiles: Triggers the 4 tiles that touch it\n")
+    print("\tTile Subcategory: Jump In tiles:")
+    print("\tJump In tiles are activated after a tile of a certain type is triggered\n")
+    print("\t\ttbb type tiles: Triggered after a tile of the letter B is triggered")
+    print("\t\ttbi type tiles: Triggered after a tile of the letter I is triggered")
+    print("\t\ttbn type tiles: Triggered after a tile of the letter N is triggered")
+    print("\t\ttbg type tiles: Triggered after a tile of the letter G is triggered")
+    print("\t\ttbo type tiles: Triggered after a tile of the letter O is triggered")
+    print("\t\ttbd type tiles: Triggered after a tile with an odd number is triggered")
+    print("\t\ttbe type tiles: Triggered after a tile with an even number is triggered")
+    print("\t\tjmp type tiles: A special Jump in tile, has a 10% chance to trigger after any tile is triggered\n")
+    
+    print("\nTips to Remember:")
+    print("\tBuying a tile removes any permanent multipliers it may have, and reverts its associated ball back to a normal type\n")
+    
+
+
 # determines what items show up in the shop
 def roll_shop(upgrades_list, addons_list, tiles_list):
     upgrades = []
@@ -483,6 +515,9 @@ def play_out_round(user, tile_number, tile_score, tile_type, tile_index, tile_mu
             show_shop = True
             while show_shop == True:
                 show_shop = open_shop(available_upgrades, available_addons, available_tiles)
+        elif user.lower() == "he":
+            item_help()
+
     end_of_round = False
         
     if rolling:
@@ -800,7 +835,7 @@ for tile in possible_tiles:
     for index in range(0, tile[2]):
         weighted_tiles.append(tile)
         
-score = 10000000
+score = 0
 
 # ----- main code -----
 grid = create_grid(num_rows, num_cols)
