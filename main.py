@@ -246,9 +246,9 @@ def game_interaction(game_score, input_type, price_coe, base_charges, current_ch
                 good_input = True
                 score = score - (available_tiles[user-1][1] * price_coe)
 
-        # sanitization for adding a new tile to the board (index)
+        # sanitization for adding a new tile/ball to the board (index)
         elif input_type == "tile":
-            user = int(input("enter the index of the tile you want to replace\n >>\t"))
+            user = int(input("enter the index of the item you want to replace\n >>\t"))
 
             bad_letter = 0
             for letter in str(user):
@@ -256,6 +256,28 @@ def game_interaction(game_score, input_type, price_coe, base_charges, current_ch
                     bad_letter += 1
             
             if bad_letter == 0:
+                good_input = True
+            else:
+                print("Not a valid input.")
+
+        # sanitization for adding a new addon to the board (index)
+        elif input_type == "addon":
+            user = int(input("enter the index of the addon you want to replace\n >>\t"))
+
+            bad_letter = 0
+            for letter in str(user):
+                if letter not in "1234567890":
+                    bad_letter += 1
+            
+            temp_tile = find_cell(user, None, False)
+            slots = 0
+            for tile in cell_addons[temp_tile[0]][temp_tile[1]]:
+                if tile == "nor":
+                    slots += 1
+            
+            if slots <= 0:
+                print("This tile has the maximum number of addons")
+            elif bad_letter == 0:
                 good_input = True
             else:
                 print("Not a valid input.")
@@ -384,12 +406,12 @@ def roll_shop(upgrades_list, addons_list, tiles_list):
 
     for item in range(1, 6):
         if item < 5:
-        # creates a list for each item type of random items, and multiplies their prices by a random percent between -12.50% and +12.50%
+        # creates a list for each item type of random items, and multiplies their prices by a random percent between -12.50% and +15.00%
             new_upgrade = []
             upgrade_index = random.randint(0, len(upgrades_list)-1)
             for upgrade in upgrades_list[upgrade_index]:
                 new_upgrade.append(upgrade)
-            new_upgrade[1] = math.floor(new_upgrade[1] * (random.randint(8750, 11250) / 10000))
+            new_upgrade[1] = math.floor(new_upgrade[1] * (random.randint(8750, 11500) / 10000))
             upgrades.append(new_upgrade)
 
 
@@ -397,7 +419,7 @@ def roll_shop(upgrades_list, addons_list, tiles_list):
             tile_index = random.randint(0, len(tiles_list)-1)
             for tile in tiles_list[tile_index]:
                 new_tile.append(tile)
-            new_tile[1] = math.floor(new_tile[1] * (random.randint(8750, 11250) / 10000))
+            new_tile[1] = math.floor(new_tile[1] * (random.randint(8750, 11500) / 10000))
             # gives the new tile a letter, score, and number
             new_tile.append(random.choice(letters))
             new_tile.append(random.randint(1,90))
@@ -416,7 +438,7 @@ def roll_shop(upgrades_list, addons_list, tiles_list):
         addon_index = random.randint(0, len(addons_list)-1)
         for addon in addons_list[addon_index]:
             new_addon.append(addon)
-        new_addon[1] = math.floor(new_addon[1] * (random.randint(8750, 11250) / 10000))
+        new_addon[1] = math.floor(new_addon[1] * (random.randint(8750, 11500) / 10000))
         addons.append(new_addon)
 
     return upgrades, addons, tiles
@@ -469,6 +491,7 @@ def open_shop(upgrades, addons, tiles):
             new_x = game_interaction(score, "buy2b", price_coefficient, None, None)
             if int(new_x) == 0:
                 return
+            buy_addon(addons, new_x)
         elif int(new_y) == 3:
             new_x = game_interaction(score, "buy2c", price_coefficient, None, None)
             if int(new_x) == 0:
@@ -477,7 +500,7 @@ def open_shop(upgrades, addons, tiles):
         
     return True
 
-# prompts the user for what they buy, and replaces the item
+# prompts the user for what tile they want to buy, and replaces it
 def buy_tile(shop_tiles, new_x):
     user_input = game_interaction(None, "tile", None, None, None)
 
@@ -503,7 +526,28 @@ def buy_tile(shop_tiles, new_x):
 
     #print(shop_tiles[new_x-1][0], new_x, shop_tiles)
 
+# prompts the user for what addon they want to buy, and replaces it
+def buy_addon(shop_addons, new_x):
+    user_input = game_interaction(None, "tile", None, None, None)
 
+    old_tile = find_cell(user_input, 0, False)
+
+    available_slots = 0
+    for addon in cell_addons[old_tile[0]][old_tile[1]]:
+        if addon == "nor":
+            available_slots += 1
+
+    if available_slots == 3:
+        cell_addons[old_tile[0]][old_tile[1]][0] = shop_addons[new_x-1][0]
+    if available_slots == 2:
+        cell_addons[old_tile[0]][old_tile[1]][1] = shop_addons[new_x-1][0]
+    if available_slots == 1:
+        cell_addons[old_tile[0]][old_tile[1]][2] = shop_addons[new_x-1][0]
+
+    del shop_addons[new_x-1]
+
+
+# prompts the user for what ball they want to buy, and replaces it
 def buy_ball(shop_upgrades, new_x):
     user_input = game_interaction(None, "tile", None, None, None)
 
@@ -717,6 +761,7 @@ def play_out_round(user, tile_number, tile_score, tile_type, tile_index, tile_mu
                 game_tile = Trigger_Tiles(tile_type, tile_index, tile_number, tile_mult, tile_being_scored[1], tile_being_scored[0])
                 #print("neighbors ", game_tile.find_neighbors())
                 print(f"tile being scored, number {tile_number[tile_being_scored[1]][tile_being_scored[0]]} | score {tile_score[tile_being_scored[1]][tile_being_scored[0]]} | type {tile_type[tile_being_scored[1]][tile_being_scored[0]]} | index {tile_index[tile_being_scored[1]][tile_being_scored[0]]} | mult {tile_mult[tile_being_scored[1]][tile_being_scored[0]]}")
+                print(tile_addons[tile_being_scored[1]][tile_being_scored[0]])
                 print(f"round mult {round_mult}")
 
                 # for effectless tile types, scores the cell, adds the score, and removes it from the list of cells to score
@@ -911,12 +956,12 @@ class Call_Balls:
 num_rows = 5 #num rows can be increased to extend board downward num cols can not, things break
 num_cols = 5
 
-starting_charges = 100
-charges = copy.deepcopy(starting_charges)
+starting_charges = 500
+charges = copy.deepcopy(starting_charges) -20
 bingo_discard = []
 round_generations = 5
 rolls_counter = 0
-refreshes_available = 0
+refreshes_available = 100
 
 alive = "x"
 dead = "."
@@ -925,7 +970,7 @@ game_end = False
 show_shop = False
 
 possible_balls = [["nor", 1000, 65], ["crg", 2100, 25], ["adc", 2750, 9], ["rnd", 1850, 36], ["trg", 5000, 5], ["rsc", 3750, 7], ["pml", 5000, 3], ["aat", 7000, 1]]
-possible_addons = [["nor", 500, 22]]
+possible_addons = [["mul", 1650, 10], ["xml", 1900, 7], ["phl", 2250, 1], ["scr", 1200, 15]]
 possible_tiles = [["nor", 400, 20], ["tgn", 1050, 9], ["tbb", 750, 2], ["tbi", 750, 2], ["tbn", 750, 2], ["tbg", 750, 2], ["tbo", 750, 2], ["tbd", 750, 2], ["tbe", 750, 2], ["jmp", 850, 3], ["acb", 1125, 12], ["nnb", 1250, 7 ], ["gmb", 1350, 4]]
 shop_level = 0
 
