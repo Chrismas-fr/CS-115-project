@@ -83,8 +83,15 @@ def create_cells(rows, cols):
     for y in range(0, rows):
         new_row = []
         for x in range(0, cols):
-            new_row.append("")
+            new_z = []
+            for x in range(0, 3):
+                new_z.append("nor")
+            new_row.append(new_z)
         addons.append(new_row)
+
+    for y in range(0, rows):
+        for x in range(0, cols):
+            addons[y][x][0] = "nor"
 
     # at game start, all tiles are normal type (abbreviated as "nor")
     for y in range(0, rows):
@@ -115,6 +122,8 @@ def create_cells(rows, cols):
         for x in range(0, cols):
             new_row.append(1)
         tile_multiplier.append(new_row)
+
+
 
     return letter, number, score, addons, tile_type, bingo_numbers, tile_index, tile_multiplier
 
@@ -157,7 +166,7 @@ def update_cell(cell, num_neighbors):
     pass
 
 # gets user input and sanitizes it
-def game_interaction(game_score, input_type, price_coe):
+def game_interaction(game_score, input_type, price_coe, base_charges, current_charges):
     good_input = False
     global score
 
@@ -165,20 +174,23 @@ def game_interaction(game_score, input_type, price_coe):
         # sanitization for beginning of round
         if input_type == "begin":
             user = input("ro for roll | re to refresh deck | sh to open shop | he for item help\n >>\t").lower()
-
             if not user == "ro" and not user == "re" and not user == "sh" and not user == "he":
                 print("Not a valid input, use one of the options.")
             elif user == "re" and game_score < 100:
                 print("You need at least 100 score to refresh.")
+            elif user == "sh" and base_charges - current_charges < 20:
+                print(f"You need to have roll {20 - (base_charges - current_charges)} more times before you can open the shop.")
             else:
                 good_input = True
 
         # sanitization for interacting with the shop
         elif input_type == "shop":
-            user = input("b to buy an item | r to refresh | e to exit shop\n >>\t").lower()
+            user = input(f"b to buy an item | r to refresh ({game_score} available) | e to exit shop\n >>\t").lower()
 
             if len(user) != 1 or user not in "bre":
                 print("Not a valid input, use one of the options.")
+            elif user == "r" and game_score < 1:
+                print("You do not have any available refreshes")
             else:
                 good_input = True
 
@@ -329,6 +341,7 @@ def score_cell(cell_xy, tile_scores):
         index_y += 1
     return score
 
+# tells the user about every item in the game
 def item_help():
     print("\nItem Help tells you the exact effects of each item in the game!")
 
@@ -355,12 +368,13 @@ def item_help():
     print("\t\ttbd type tiles: Triggered after a tile with an odd number is triggered")
     print("\t\ttbe type tiles: Triggered after a tile with an even number is triggered")
     print("\t\tjmp type tiles: A special Jump in tile, has a 10% chance to trigger after any tile is triggered\n")
+    print("\tacb type tiles: Additionally triggers between 3 and 8 random unique tiles")
     
     print("\nTips to Remember:")
     print("\tBuying a tile removes any permanent multipliers it may have, and reverts its associated ball back to a normal type\n")
+    print("\tRefreshing your deck takes 10% of your current score, and needs at least 100 score to work.")
+    print("\tYou need to roll 20 times before you can open the shop")
     
-
-
 # determines what items show up in the shop
 def roll_shop(upgrades_list, addons_list, tiles_list):
     upgrades = []
@@ -389,6 +403,11 @@ def roll_shop(upgrades_list, addons_list, tiles_list):
             new_tile.append(random.randint(1,90))
             new_tile.append(random.randint(1,75))
 
+            # nnb type tiles have a number that can't be rolled and a much higher number so they are generated separately
+            if new_tile[0] == "nnb":
+                new_tile[4] = random.randint(125, 550)
+                new_tile[5] = -1
+
             tiles.append(new_tile)
 
 
@@ -405,6 +424,7 @@ def roll_shop(upgrades_list, addons_list, tiles_list):
 # handles shop interactions
 def open_shop(upgrades, addons, tiles):
     price_coefficient = 1
+    global refreshes_available
 
     print("Deck Upgrades:")
     for index, upgrade in enumerate(upgrades):
@@ -429,33 +449,37 @@ def open_shop(upgrades, addons, tiles):
             weight += number[2]
         chance = (100*tile[2]) / weight
         print(f"\t Tile {index + 1}: {tile[0]} | price: {tile[1]* price_coefficient} points | chance of dropping: {round(chance)} | letter: {tile[3]} | score: {tile[4]} | number: {tile[5]}")
-    user_input = game_interaction(None, "shop", None)
+    user_input = game_interaction(refreshes_available, "shop", None, None, None)
 
     if user_input == "e":
         return False
     elif user_input == "r":
         global available_upgrades, available_addons, available_tiles
         available_upgrades, available_addons, available_tiles = roll_shop(weighted_balls, weighted_addons, weighted_tiles)
+        refreshes_available -= 1
     elif user_input == "b":
-        new_y = game_interaction(None, "buy1", None)
+        new_y = game_interaction(None, "buy1", None, None, None)
 
         if int(new_y) == 1:
-            new_x = game_interaction(score, "buy2a", price_coefficient)
+            new_x = game_interaction(score, "buy2a", price_coefficient, None, None)
+            if int(new_x) == 0:
+                return
             buy_ball(upgrades, new_x)
         elif int(new_y) == 2:
-            new_x = game_interaction(score, "buy2b", price_coefficient)
+            new_x = game_interaction(score, "buy2b", price_coefficient, None, None)
+            if int(new_x) == 0:
+                return
         elif int(new_y) == 3:
-            new_x = game_interaction(score, "buy2c", price_coefficient)
+            new_x = game_interaction(score, "buy2c", price_coefficient, None, None)
+            if int(new_x) == 0:
+                return
             buy_tile(tiles, new_x)
-
-        if int(new_x) == 0:
-            return
         
     return True
 
 # prompts the user for what they buy, and replaces the item
 def buy_tile(shop_tiles, new_x):
-    user_input = game_interaction(None, "tile", None)
+    user_input = game_interaction(None, "tile", None, None, None)
 
     old_tile = find_cell(user_input, 0, False)
 
@@ -469,8 +493,9 @@ def buy_tile(shop_tiles, new_x):
     all_deck = bingo_deck + bingo_discard
     for ball in all_deck:
         if ball[2] == user_input:
-            ball[0] = shop_tiles[new_x-1][5]
             ball[1] = "nor"
+            if not shop_tiles[new_x-1][0] == "nnb": # nnb tiles do not have a number, so if one is bought, don't add a number to the reset ball
+                ball[0] = shop_tiles[new_x-1][5]
 
 
     #removing the purchaced tile from the shop
@@ -478,18 +503,19 @@ def buy_tile(shop_tiles, new_x):
 
     #print(shop_tiles[new_x-1][0], new_x, shop_tiles)
 
+
 def buy_ball(shop_upgrades, new_x):
-    user_input = game_interaction(None, "tile", None)
+    user_input = game_interaction(None, "tile", None, None, None)
 
     all_deck = bingo_deck + bingo_discard
     for ball in all_deck:
         if ball[2] == user_input:
             ball[1] = shop_upgrades[new_x-1][0]
 
-    del  shop_upgrades[new_x-1]
+    del shop_upgrades[new_x-1]
 
 # handles everything in a roll
-def play_out_round(user, tile_number, tile_score, tile_type, tile_index, tile_mult, tile_letter):
+def play_out_round(user, tile_number, tile_score, tile_type, tile_index, tile_mult, tile_letter, tile_addons):
     end_of_round = True
     game_generations = 5
     round_roll = None
@@ -497,6 +523,8 @@ def play_out_round(user, tile_number, tile_score, tile_type, tile_index, tile_mu
     roll_type = None
     global score
     global charges
+    global cell_mult
+    global rolls_counter
     rolling = False
     add_extra_tiles = False
     round_mult = 1
@@ -508,6 +536,7 @@ def play_out_round(user, tile_number, tile_score, tile_type, tile_index, tile_mu
             print("Rolled: ", round_roll, "| Type: ", roll_type) 
             charges -= 1
             rolling = True
+            rolls_counter += 1
         elif user.lower() == "re":
             deck_reroll()
             score -= round(score*0.1)
@@ -558,7 +587,7 @@ def play_out_round(user, tile_number, tile_score, tile_type, tile_index, tile_mu
             if chance >= 65:
                 for row in range(0, num_rows):
                     for col in range(0, num_cols):
-                        cell_mult[row][col] = round(100*(cell_mult[row][col] + 0.12))/100
+                        cell_mult[row][col] = round(1000*(cell_mult[row][col] + 0.12))/1000
         if roll_type == "aat": # very small chance to additionally activate all tiles
             chance = random.randint(0,100)
             if chance > 95:
@@ -573,6 +602,8 @@ def play_out_round(user, tile_number, tile_score, tile_type, tile_index, tile_mu
         tiles_to_score = find_cell(tile_number, round_roll, True)
         if add_extra_tiles: tiles_to_score = tiles_to_score + extra_tiles
 
+        extra_tiles = []
+        add_extra_tiles = False
         
 
         # add tbb tiles after generation
@@ -662,9 +693,25 @@ def play_out_round(user, tile_number, tile_score, tile_type, tile_index, tile_mu
 
             for tile_being_scored in tiles_to_score:
                 print("all tiles to score", tiles_to_score)
-                #print(tile_being_scored)
 
-                # i need to remove the tile being scored after it is scored, but removing it from tiles_to_score messes with with the amount of times the for loop runs.
+                # handling addon effects
+                xml_chance = random.randint(0, 4)
+                additive_score = random.randint(50,100)
+                for addon in tile_addons[tile_being_scored[1]][tile_being_scored[0]]:
+                    if addon == "mul":
+                        tile_mult[tile_being_scored[1]][tile_being_scored[0]] += 0.2
+                    
+                    if addon == "xml":
+                        if xml_chance == 5:
+                            tile_mult[tile_being_scored[1]][tile_being_scored[0]] = tile_mult[tile_being_scored[1]][tile_being_scored[0]] * 2.5
+
+                    if addon == "phl":
+                        round_mult += (tile_mult[tile_being_scored[1]][tile_being_scored[0]] / 5)
+
+                    if addon == "scr":
+                        tile_score[tile_being_scored[1]][tile_being_scored[0]] += additive_score
+
+                    
                 
                 # creates a tile from the Trigger Tiles class each loop
                 game_tile = Trigger_Tiles(tile_type, tile_index, tile_number, tile_mult, tile_being_scored[1], tile_being_scored[0])
@@ -682,7 +729,8 @@ def play_out_round(user, tile_number, tile_score, tile_type, tile_index, tile_mu
                     tile_type[tile_being_scored[1]][tile_being_scored[0]] == "tbo" or
                     tile_type[tile_being_scored[1]][tile_being_scored[0]] == "tbe" or
                     tile_type[tile_being_scored[1]][tile_being_scored[0]] == "tbd" or
-                    tile_type[tile_being_scored[1]][tile_being_scored[0]] == "jmp"
+                    tile_type[tile_being_scored[1]][tile_being_scored[0]] == "jmp" or
+                    tile_type[tile_being_scored[1]][tile_being_scored[0]] == "nnb"
                     ):
                     add_score = score_cell(tile_being_scored, tile_score)
                     score += round(add_score * tile_mult[tile_being_scored[1]][tile_being_scored[0]] * round_mult)
@@ -706,22 +754,78 @@ def play_out_round(user, tile_number, tile_score, tile_type, tile_index, tile_mu
                     #print("\tall the neighbors: ttscopy", tts_copy)
                     #print(tiles_to_score, "tiles to score")
                     #print(add_score, end=", ")
+
+                if tile_type[tile_being_scored[1]][tile_being_scored[0]] == "acb":
+                    add_score = score_cell(tile_being_scored, tile_score)
+                    score += round(add_score * tile_mult[tile_being_scored[1]][tile_being_scored[0]] * round_mult)
+                    print("adding score:", round(add_score * tile_mult[tile_being_scored[1]][tile_being_scored[0]] * round_mult))
+                    tts_copy.remove(tts_copy[0])
+
+                    num_to_add = random.randint(3, 8)
+                    while len(extra_tiles) < num_to_add:
+                        new_tile = game_tile.get_random_tile()
+                        print(new_tile, tile_being_scored)
+                        if not new_tile in extra_tiles and not new_tile == tile_being_scored:
+                            extra_tiles.append(new_tile)
+
+                if tile_type[tile_being_scored[1]][tile_being_scored[0]] == "gmb":
+                    chance = random.randint(0,100)
+
+                    if chance >= 85:
+                        add_score = score_cell(tile_being_scored, tile_score)
+                        score += round(add_score * tile_mult[tile_being_scored[1]][tile_being_scored[0]] * round_mult) * 20
+                        print("adding score:", round(add_score * tile_mult[tile_being_scored[1]][tile_being_scored[0]] * round_mult) * 20)
+                        tts_copy.remove(tts_copy[0])
+                    else:
+                        add_score = score_cell(tile_being_scored, tile_score)
+                        score += round(add_score * tile_mult[tile_being_scored[1]][tile_being_scored[0]] * round_mult)
+                        print("adding score:", round(add_score * tile_mult[tile_being_scored[1]][tile_being_scored[0]] * round_mult))
+                        tts_copy.remove(tts_copy[0])
+
+                if tile_type[tile_being_scored[1]][tile_being_scored[0]] == "prm":
+                    cell_mult[tile_being_scored[1]][tile_being_scored[0]] += round(1000*(cell_mult[tile_being_scored[1]][tile_being_scored[0]] * 0.15))/1000
+                    print(cell_mult[tile_being_scored[1]][tile_being_scored[0]], "CELL MULT")
+
+                    add_score = score_cell(tile_being_scored, tile_score)
+                    score += round(add_score * tile_mult[tile_being_scored[1]][tile_being_scored[0]] * round_mult)
+                    print("adding score:", round(add_score * tile_mult[tile_being_scored[1]][tile_being_scored[0]] * round_mult))
+                    tts_copy.remove(tts_copy[0])
+
+                for addon in tile_addons[tile_being_scored[1]][tile_being_scored[0]]:
+                    if addon == "mul":
+                        tile_mult[tile_being_scored[1]][tile_being_scored[0]] -= 0.2
+
+                    if addon == "xml":
+                        if xml_chance == 5:
+                            tile_mult[tile_being_scored[1]][tile_being_scored[0]] = tile_mult[tile_being_scored[1]][tile_being_scored[0]] / 2.5
+
+                    if addon == "phl":
+                        round_mult -= (tile_mult[tile_being_scored[1]][tile_being_scored[0]] / 5)
+
+                    if addon == "scr":
+                        tile_score[tile_being_scored[1]][tile_being_scored[0]] -= additive_score
+
+
                 
             # converts the main array into the copy (changing an array while iterating though it causes problems, using a copy is a workaround)
             for tile in jump_in_tiles:
                 tts_copy.append(tile)
                 pass
+            if not len(extra_tiles) == 0:
+                for tile in extra_tiles:
+                    tts_copy.append(tile)
+            del extra_tiles[:]
             tiles_to_score = copy.deepcopy(tts_copy)
 
-                
-
             game_generations -= 1
-            #print("end of gen\n\n\n")
+            print("end of gen\n\n\n")
             #stops the round if theres nothing left to do
             if len(tiles_to_score) < 1:
                 game_generations = 0
-            #print(game_generations, "generations")
+            print(game_generations, "generations")
             #time.sleep(0.5)
+
+            print(tile_mult)
 
 
         #create tile from class as first thing, create array of each tile effected by last round (first round just defaults to the numbers from ball) then run each tile separately from array and put each tile affected into the array and repeat until generations are used up
@@ -787,6 +891,10 @@ class Trigger_Tiles:
             neighbor_locations.append(find_cell(neighbor, 0, False))
 
         return neighbor_locations
+    
+    def get_random_tile(self):
+        rannum = random.randint(0, 24)
+        return find_cell(rannum, None, False)
 
     
 class Call_Balls:
@@ -807,6 +915,8 @@ starting_charges = 100
 charges = copy.deepcopy(starting_charges)
 bingo_discard = []
 round_generations = 5
+rolls_counter = 0
+refreshes_available = 0
 
 alive = "x"
 dead = "."
@@ -816,7 +926,8 @@ show_shop = False
 
 possible_balls = [["nor", 1000, 65], ["crg", 2100, 25], ["adc", 2750, 9], ["rnd", 1850, 36], ["trg", 5000, 5], ["rsc", 3750, 7], ["pml", 5000, 3], ["aat", 7000, 1]]
 possible_addons = [["nor", 500, 22]]
-possible_tiles = [["nor", 400, 20], ["tgn", 1050, 9], ["tbb", 750, 2], ["tbi", 750, 2], ["tbn", 750, 2], ["tbg", 750, 2], ["tbo", 750, 2], ["tbd", 750, 2], ["tbe", 750, 2], ["jmp", 850, 3]]
+possible_tiles = [["nor", 400, 20], ["tgn", 1050, 9], ["tbb", 750, 2], ["tbi", 750, 2], ["tbn", 750, 2], ["tbg", 750, 2], ["tbo", 750, 2], ["tbd", 750, 2], ["tbe", 750, 2], ["jmp", 850, 3], ["acb", 1125, 12], ["nnb", 1250, 7 ], ["gmb", 1350, 4]]
+shop_level = 0
 
 # creating the weighted lists of items
 weighted_balls = []
@@ -846,7 +957,7 @@ available_upgrades, available_addons, available_tiles = roll_shop(weighted_balls
 while not game_end:
         # input
     
-    user_input = game_interaction(score, "begin", None)
+    user_input = game_interaction(score, "begin", None, starting_charges, charges)
 
         # update
 
@@ -866,7 +977,11 @@ while not game_end:
             #update cell state
             grid[y][x] = update_cell(grid_copy[y][x], alive_neighbors)
 
-    play_out_round(user_input, cell_number, cell_score, cell_type, cell_index, cell_mult, cell_letter)
+    play_out_round(user_input, cell_number, cell_score, cell_type, cell_index, cell_mult, cell_letter, cell_addons)
+
+    if rolls_counter >= 20:
+        rolls_counter = 0
+        refreshes_available += 1
 
 
         # output
@@ -876,9 +991,6 @@ while not game_end:
     print("score ", score)
     print("charges: ", charges)
     print()
-
-        
-
 
 print(f"Game over! Your final score was: {score}")
 
