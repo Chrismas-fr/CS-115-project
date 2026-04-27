@@ -173,8 +173,8 @@ def game_interaction(game_score, input_type, price_coe, base_charges, current_ch
     while not good_input:
         # sanitization for beginning of round
         if input_type == "begin":
-            user = input("ro for roll | re to refresh deck | sh to open shop | he for item help\n >>\t").lower()
-            if not user == "ro" and not user == "re" and not user == "sh" and not user == "he":
+            user = input("ro for roll | re to refresh deck | sh to open shop | he for item help | ve to view addons\n >>\t").lower()
+            if not user == "ro" and not user == "re" and not user == "sh" and not user == "he" and not user == "ve":
                 print("Not a valid input, use one of the options.")
             elif user == "re" and game_score < 100:
                 print("You need at least 100 score to refresh.")
@@ -185,7 +185,7 @@ def game_interaction(game_score, input_type, price_coe, base_charges, current_ch
 
         # sanitization for interacting with the shop
         elif input_type == "shop":
-            user = input(f"b to buy an item | r to refresh ({game_score} available) | e to exit shop\n >>\t").lower()
+            user = input(f"b to buy an item | r to refresh ({game_score} available) | u to upgrade shop ({base_charges} score) | e to exit shop\n >>\t").lower()
 
             if len(user) != 1 or user not in "bre":
                 print("Not a valid input, use one of the options.")
@@ -193,7 +193,6 @@ def game_interaction(game_score, input_type, price_coe, base_charges, current_ch
                 print("You do not have any available refreshes")
             else:
                 good_input = True
-
 
         # sanitization for first phase of buying
         elif input_type == "buy1":
@@ -212,11 +211,11 @@ def game_interaction(game_score, input_type, price_coe, base_charges, current_ch
                 print("Not a valid input, enter the number corresponding to the item")
             elif user == 0:
                 good_input = True
-            elif (available_upgrades[user-1][1] * price_coe) > game_score:
-                print(f"You don't have enough money to purchace this item, you need {available_upgrades[user-1][1] * price_coe}, you have {game_score}.")
+            elif (available_upgrades[user-1][1]) > game_score:
+                print(f"You don't have enough money to purchace this item, you need {available_upgrades[user-1][1]}, you have {game_score}.")
             else:
                 good_input = True
-                score = score - (available_upgrades[user-1][1] * price_coe)
+                score = score - (available_upgrades[user-1][1])
                 
         # sanitization for second phase of buying (if buying addons)
         elif input_type == "buy2b":
@@ -226,11 +225,11 @@ def game_interaction(game_score, input_type, price_coe, base_charges, current_ch
                 print("Not a valid input, enter the number corresponding to the item")
             elif user == 0:
                 good_input = True
-            elif (available_addons[user-1][1] * price_coe) > game_score:
-                print(f"You don't have enough money to purchace this item, you need {available_addons[user-1][1] * price_coe}, you have {game_score}.")
+            elif (available_addons[user-1][1]) > game_score:
+                print(f"You don't have enough money to purchace this item, you need {available_addons[user-1][1]}, you have {game_score}.")
             else:
                 good_input = True
-                score = score - (available_addons[user-1][1] * price_coe)
+                score = score - (available_addons[user-1][1])
 
         # sanitization for second phase of buying (if buying upgrades)
         elif input_type == "buy2c":
@@ -240,11 +239,11 @@ def game_interaction(game_score, input_type, price_coe, base_charges, current_ch
                 print("Not a valid input, enter the number corresponding to the item")
             elif user == 0:
                 good_input = True
-            elif (available_tiles[user-1][1] * price_coe) > game_score:
-                print(f"You don't have enough money to purchace this item, you need {available_tiles[user-1][1] * price_coe}, you have {game_score}.")
+            elif (available_tiles[user-1][1]) > game_score:
+                print(f"You don't have enough money to purchace this item, you need {available_tiles[user-1][1]}, you have {game_score}.")
             else:
                 good_input = True
-                score = score - (available_tiles[user-1][1] * price_coe)
+                score = score - (available_tiles[user-1][1])
 
         # sanitization for adding a new tile/ball to the board (index)
         elif input_type == "tile":
@@ -262,7 +261,11 @@ def game_interaction(game_score, input_type, price_coe, base_charges, current_ch
 
         # sanitization for adding a new addon to the board (index)
         elif input_type == "addon":
-            user = int(input("enter the index of the addon you want to replace\n >>\t"))
+            user = int(input("enter the index of the item you want to replace or 99 to exit\n >>\t"))
+
+            if user == 99:
+                good_input = True
+                return user
 
             bad_letter = 0
             for letter in str(user):
@@ -275,12 +278,29 @@ def game_interaction(game_score, input_type, price_coe, base_charges, current_ch
                 if tile == "nor":
                     slots += 1
             
+            print(slots, "SLOTSSS\n\n")
+            
             if slots <= 0:
                 print("This tile has the maximum number of addons")
             elif bad_letter == 0:
                 good_input = True
             else:
                 print("Not a valid input.")
+
+        # sanitization for finding a tile
+        elif input_type == "findaddon":
+            user = int(input("ender the index of the tile you want to view\n >>\t"))
+            
+            bad_letter = 0
+            for letter in str(user):
+                if letter not in "1234567890":
+                    bad_letter += 1
+
+            if bad_letter == 0:
+                good_input = True
+            else:
+                print("Not a valid input.")
+
 
     return user
 
@@ -377,11 +397,17 @@ def item_help():
     print("\tpml type upgrades: 35% chance to add a permanent 12% multiplier to all tiles\n")
     print("\taat type upgrades: 5% chance to additionally trigger all tiles\n")
 
+    print("\nAddon Types:")
+    print("\tmul type addons: Adds a 1.2x multiplier to the tile\n")
+    print("\txmp type addons: 25% chance to multiply the tile's mult by 2.5x\n")
+    print("\tphl type addons: Adds 20% of this tile's mult to the round multiplier\n")
+    print("\tscr type addons: Adds a random number between 50 and 100 to the tile's score each round\n")
+
     print("\nTile Types:")
     print("\tnor type tiles: The default tile type, has no effect\n")
     print("\ttgn type tiles: Triggers the 4 tiles that touch it\n")
     print("\tTile Subcategory: Jump In tiles:")
-    print("\tJump In tiles are activated after a tile of a certain type is triggered\n")
+    print("\tJump In tiles are activated after a tile of a certain type is triggered")
     print("\t\ttbb type tiles: Triggered after a tile of the letter B is triggered")
     print("\t\ttbi type tiles: Triggered after a tile of the letter I is triggered")
     print("\t\ttbn type tiles: Triggered after a tile of the letter N is triggered")
@@ -394,11 +420,11 @@ def item_help():
     
     print("\nTips to Remember:")
     print("\tBuying a tile removes any permanent multipliers it may have, and reverts its associated ball back to a normal type\n")
-    print("\tRefreshing your deck takes 10% of your current score, and needs at least 100 score to work.")
-    print("\tYou need to roll 20 times before you can open the shop")
+    print("\tRefreshing your deck takes 10% of your current score, and needs at least 100 score to work\n")
+    print("\tYou need to roll 20 times before you can open the shop\n\n")
     
 # determines what items show up in the shop
-def roll_shop(upgrades_list, addons_list, tiles_list):
+def roll_shop(upgrades_list, addons_list, tiles_list, cost_coe):
     upgrades = []
     addons = []
     tiles = []
@@ -411,7 +437,7 @@ def roll_shop(upgrades_list, addons_list, tiles_list):
             upgrade_index = random.randint(0, len(upgrades_list)-1)
             for upgrade in upgrades_list[upgrade_index]:
                 new_upgrade.append(upgrade)
-            new_upgrade[1] = math.floor(new_upgrade[1] * (random.randint(8750, 11500) / 10000))
+            new_upgrade[1] = math.floor((new_upgrade[1] * (random.randint(8750, 11500) / 10000)) * cost_coe)
             upgrades.append(new_upgrade)
 
 
@@ -419,7 +445,7 @@ def roll_shop(upgrades_list, addons_list, tiles_list):
             tile_index = random.randint(0, len(tiles_list)-1)
             for tile in tiles_list[tile_index]:
                 new_tile.append(tile)
-            new_tile[1] = math.floor(new_tile[1] * (random.randint(8750, 11500) / 10000))
+            new_tile[1] = math.floor((new_tile[1] * (random.randint(8750, 11500) / 10000)) * cost_coe)
             # gives the new tile a letter, score, and number
             new_tile.append(random.choice(letters))
             new_tile.append(random.randint(1,90))
@@ -438,7 +464,7 @@ def roll_shop(upgrades_list, addons_list, tiles_list):
         addon_index = random.randint(0, len(addons_list)-1)
         for addon in addons_list[addon_index]:
             new_addon.append(addon)
-        new_addon[1] = math.floor(new_addon[1] * (random.randint(8750, 11500) / 10000))
+        new_addon[1] = (math.floor(new_addon[1] * (random.randint(8750, 11500) / 10000)) * cost_coe)
         addons.append(new_addon)
 
     return upgrades, addons, tiles
@@ -454,7 +480,7 @@ def open_shop(upgrades, addons, tiles):
         for number in possible_balls:
             weight += number[2]
         chance = (100*upgrade[2]) / weight
-        print(f"\t Upgrade {index + 1}: {upgrade[0]} | price: {upgrade[1] * price_coefficient} points | chance of dropping: {round(chance)}")
+        print(f"\t Upgrade {index + 1}: {upgrade[0]} | price: {upgrade[1]} points | chance of dropping: {round(chance)}")
 
     print("Tile Addons:")
     for index, addon in enumerate(addons):
@@ -462,7 +488,7 @@ def open_shop(upgrades, addons, tiles):
         for number in possible_addons:
             weight += number[2]
         chance = (100*addon[2]) / weight
-        print(f"\t Addon {index + 1}: {addon[0]} | price: {addon[1] * price_coefficient} points | chance of dropping: {round(chance)}")
+        print(f"\t Addon {index + 1}: {addon[0]} | price: {addon[1]} points | chance of dropping: {round(chance)}")
         
     print("New Tiles:")
     for index, tile in enumerate(tiles):
@@ -470,7 +496,7 @@ def open_shop(upgrades, addons, tiles):
         for number in possible_tiles:
             weight += number[2]
         chance = (100*tile[2]) / weight
-        print(f"\t Tile {index + 1}: {tile[0]} | price: {tile[1]* price_coefficient} points | chance of dropping: {round(chance)} | letter: {tile[3]} | score: {tile[4]} | number: {tile[5]}")
+        print(f"\t Tile {index + 1}: {tile[0]} | price: {tile[1]} points | chance of dropping: {round(chance)} | letter: {tile[3]} | score: {tile[4]} | number: {tile[5]}")
     user_input = game_interaction(refreshes_available, "shop", None, None, None)
 
     if user_input == "e":
@@ -528,7 +554,10 @@ def buy_tile(shop_tiles, new_x):
 
 # prompts the user for what addon they want to buy, and replaces it
 def buy_addon(shop_addons, new_x):
-    user_input = game_interaction(None, "tile", None, None, None)
+    user_input = game_interaction(None, "addon", None, None, None)
+
+    if user_input == 99:
+        return
 
     old_tile = find_cell(user_input, 0, False)
 
@@ -546,7 +575,6 @@ def buy_addon(shop_addons, new_x):
 
     del shop_addons[new_x-1]
 
-
 # prompts the user for what ball they want to buy, and replaces it
 def buy_ball(shop_upgrades, new_x):
     user_input = game_interaction(None, "tile", None, None, None)
@@ -558,8 +586,14 @@ def buy_ball(shop_upgrades, new_x):
 
     del shop_upgrades[new_x-1]
 
+def find_addons():
+    user_input = game_interaction(None, "findaddon", None, None, None)
+
+    tile = find_cell(user_input, None, False)
+    print(f"Tile {user_input}'s addons: {cell_addons[tile[0]][tile[1]]}")
+
 # handles everything in a roll
-def play_out_round(user, tile_number, tile_score, tile_type, tile_index, tile_mult, tile_letter, tile_addons):
+def play_out_round(user, tile_number, tile_score, tile_type, tile_index, tile_mult, tile_letter, tile_addons, round_mult):
     end_of_round = True
     game_generations = 5
     round_roll = None
@@ -571,7 +605,6 @@ def play_out_round(user, tile_number, tile_score, tile_type, tile_index, tile_mu
     global rolls_counter
     rolling = False
     add_extra_tiles = False
-    round_mult = 1
 
     # at beginning of round, determines user input
     if end_of_round:
@@ -590,6 +623,8 @@ def play_out_round(user, tile_number, tile_score, tile_type, tile_index, tile_mu
                 show_shop = open_shop(available_upgrades, available_addons, available_tiles)
         elif user.lower() == "he":
             item_help()
+        elif user.lower() == "ve":
+            find_addons()
 
     end_of_round = False
         
@@ -991,12 +1026,13 @@ for tile in possible_tiles:
     for index in range(0, tile[2]):
         weighted_tiles.append(tile)
         
-score = 0
+score = 10000000
+global_multiplier = 1
 
 # ----- main code -----
 grid = create_grid(num_rows, num_cols)
 cell_letter, cell_number, cell_score, cell_addons, cell_type, bingo_deck, cell_index, cell_mult = create_cells(num_rows, num_cols)
-available_upgrades, available_addons, available_tiles = roll_shop(weighted_balls, weighted_addons, weighted_tiles)
+available_upgrades, available_addons, available_tiles = roll_shop(weighted_balls, weighted_addons, weighted_tiles, 1)
 
 #for generation in range(0, 5):
 while not game_end:
@@ -1022,11 +1058,13 @@ while not game_end:
             #update cell state
             grid[y][x] = update_cell(grid_copy[y][x], alive_neighbors)
 
-    play_out_round(user_input, cell_number, cell_score, cell_type, cell_index, cell_mult, cell_letter, cell_addons)
+    play_out_round(user_input, cell_number, cell_score, cell_type, cell_index, cell_mult, cell_letter, cell_addons, global_multiplier)
 
     if rolls_counter >= 20:
         rolls_counter = 0
         refreshes_available += 1
+
+    global_multiplier = 1.25 ** shop_level
 
 
         # output
@@ -1125,4 +1163,137 @@ deck weights:
     aat 1
 
 to add a pre game settings menu make a separate file that writes to the file that main reads from
+
+
+shop levels:
+level 0: 
+    tiles:
+        nor 30
+        acb 8
+        gmb 3
+        prm 2
+    addons:
+        scr 1
+    balls:
+        nor 30
+        crg 9
+        rnd 11
+        rsc 4
+
+level 1:
+    tiles:
+        nor 26
+        tbb 2 each
+        acb 9
+        gmb 3
+        prm 2
+    addons:
+        mul 5
+        scr 15
+    balls:
+        nor 25
+        crg 10
+        rnd 12
+        rsc 5
+        pml 3
+
+level 2:
+    tiles:
+        nor 26
+        tgn4 10
+        tbb 2 each
+        acb 11
+        gmb 3
+        jmp 3
+        prm 3
+    addons:
+        mul 6
+        xml 4
+        phl 1
+        scr 14
+    balls:
+        nor 38
+        crg 11
+        adc 7
+        rnd 12
+        rsc 6
+        pml 3
+
+level 3:
+    tiles:
+        nor 20
+        tgn4 9
+        tbb 2 each
+        acb 12
+        nnb 7
+        gmb 4
+        jmp 4
+        prm 3
+    addons:
+        mul 10
+        xml 7
+        phl 1
+        scr 15
+    balls:
+        nor 65
+        crg 25
+        adc 9
+        rnd 36
+        trg 5
+        rsc 7
+        pml 2
+        aat 1
+
+level 4:
+    tiles:
+        nor 18
+        tgn4 13
+        tbb 2 each
+        acb 15
+        nnb 10
+        gmb 5
+        jmp 5
+        prm 4
+    addons:
+        mul 12
+        xml 9
+        phl 2
+        scr 13
+    balls:
+        nor 50
+        crg 25
+        adc 12
+        rnd 40
+        trg 8
+        rsc 11
+        pml 3
+        aat 2
+
+level 5:
+    tiles:
+        nor 17
+        tgn8 15
+        tbb 2 each
+        acb 15
+        nnb 10
+        gmb 6
+        jmp 6
+        prm 4
+    addons:
+        mul 13
+        xml 9
+        phl 3
+        scr 12
+    balls:
+        nor 40
+        crg 25
+        adc 13
+        rnd 34
+        trg 10
+        rsc 11
+        pml 4
+        aat 3
+
+
+
 '''
