@@ -104,7 +104,7 @@ def create_cells(rows, cols):
     for index, num in enumerate(random_numbers):
         entry = []
         entry.append(num)
-        entry.append("nor")
+        entry.append("rsc")
         entry.append(index)
         bingo_numbers.append(entry)
     random.shuffle(bingo_numbers)
@@ -187,7 +187,7 @@ def game_interaction(game_score, input_type, price_coe, base_charges, current_ch
         elif input_type == "shop":
             user = input(f"b to buy an item | r to refresh ({game_score} available) | u to upgrade shop ({base_charges} score) | e to exit shop\n >>\t").lower()
 
-            if len(user) != 1 or user not in "bre":
+            if len(user) != 1 or user not in "brue":
                 print("Not a valid input, use one of the options.")
             elif user == "r" and game_score < 1:
                 print("You do not have any available refreshes")
@@ -458,14 +458,16 @@ def roll_shop(upgrades_list, addons_list, tiles_list, cost_coe):
 
             tiles.append(new_tile)
 
-
-
         new_addon = []
         addon_index = random.randint(0, len(addons_list)-1)
         for addon in addons_list[addon_index]:
             new_addon.append(addon)
         new_addon[1] = (math.floor(new_addon[1] * (random.randint(8750, 11500) / 10000)) * cost_coe)
         addons.append(new_addon)
+
+    print(upgrades)
+    print(addons)
+    print(tiles)
 
     return upgrades, addons, tiles
 
@@ -497,32 +499,40 @@ def open_shop(upgrades, addons, tiles):
             weight += number[2]
         chance = (100*tile[2]) / weight
         print(f"\t Tile {index + 1}: {tile[0]} | price: {tile[1]} points | chance of dropping: {round(chance)} | letter: {tile[3]} | score: {tile[4]} | number: {tile[5]}")
-    user_input = game_interaction(refreshes_available, "shop", None, None, None)
+    user_input = game_interaction(refreshes_available, "shop", None, 1000, None)
 
+
+    buying = False
     if user_input == "e":
         return False
     elif user_input == "r":
         global available_upgrades, available_addons, available_tiles
-        available_upgrades, available_addons, available_tiles = roll_shop(weighted_balls, weighted_addons, weighted_tiles)
+        available_upgrades, available_addons, available_tiles = roll_shop(weighted_balls, weighted_addons, weighted_tiles, price_coefficient)
         refreshes_available -= 1
     elif user_input == "b":
         new_y = game_interaction(None, "buy1", None, None, None)
+        buying = True
+    elif user_input == "u":
+        global shop_level
+        shop_level += 1
+        update_shop_level(shop_level)
 
-        if int(new_y) == 1:
-            new_x = game_interaction(score, "buy2a", price_coefficient, None, None)
-            if int(new_x) == 0:
-                return
-            buy_ball(upgrades, new_x)
-        elif int(new_y) == 2:
-            new_x = game_interaction(score, "buy2b", price_coefficient, None, None)
-            if int(new_x) == 0:
-                return
-            buy_addon(addons, new_x)
-        elif int(new_y) == 3:
-            new_x = game_interaction(score, "buy2c", price_coefficient, None, None)
-            if int(new_x) == 0:
-                return
-            buy_tile(tiles, new_x)
+        if buying:
+            if int(new_y) == 1:
+                new_x = game_interaction(score, "buy2a", price_coefficient, None, None)
+                if int(new_x) == 0:
+                    return
+                buy_ball(upgrades, new_x)
+            elif int(new_y) == 2:
+                new_x = game_interaction(score, "buy2b", price_coefficient, None, None)
+                if int(new_x) == 0:
+                    return
+                buy_addon(addons, new_x)
+            elif int(new_y) == 3:
+                new_x = game_interaction(score, "buy2c", price_coefficient, None, None)
+                if int(new_x) == 0:
+                    return
+                buy_tile(tiles, new_x)
         
     return True
 
@@ -659,7 +669,7 @@ def play_out_round(user, tile_number, tile_score, tile_type, tile_index, tile_mu
                         extra_tiles.append(find_cell(rnd_tile, None, False))
                 add_extra_tiles = True
         if roll_type == "rsc": # multiplies the round score by 1.35
-            round_mult = round_mult * 1.35
+            round_mult = round(100 * (round_mult * 1.35)) / 100
         if roll_type == "pml": # chance to add a permanent mult to all tiles
             global cell_mult
             chance = random.randint(0,100)
@@ -937,6 +947,79 @@ def play_out_round(user, tile_number, tile_score, tile_type, tile_index, tile_mu
                 end_of_round = True
         '''
 
+def update_shop_level(shop_level):
+    global possible_balls, possible_addons, possible_tiles
+
+    # update shop items depending on shop level
+    if shop_level == 0:
+        del possible_balls[:]
+        del possible_addons[:]
+        del possible_tiles[:]
+        possible_balls = [["nor", 1000, 30], ["crg", 2100, 9], ["rnd", 1850, 11], ["rsc", 3750, 4]]
+        possible_addons = [["scr", 1200, 15]]
+        possible_tiles = [["nor", 400, 30], ["acb", 1125, 8], ["gmb", 1350, 4], ["prm", 1500, 2]]
+    elif shop_level == 1:
+        del possible_balls[:]
+        del possible_addons[:]
+        del possible_tiles[:]
+        possible_balls = [["nor", 1000, 25], ["crg", 2100, 10], ["rnd", 1850, 12], ["rsc", 3750, 5], ["pml", 5000, 3]]
+        possible_addons = [["mul", 1650, 5], ["scr", 1200, 15]]
+        possible_tiles = [["nor", 400, 26], ["tbb", 750, 2], ["tbi", 750, 2], ["tbn", 750, 2], ["tbg", 750, 2], ["tbo", 750, 2], ["tbd", 750, 2], ["tbe", 750, 2], ["acb", 1125, 9], ["gmb", 1350, 3], ["prm", 1500, 2]]
+    elif shop_level == 2:
+        del possible_balls[:]
+        del possible_addons[:]
+        del possible_tiles[:]
+        possible_balls = [["nor", 1000, 38], ["crg", 2100, 11], ["adc", 2750, 7], ["rnd", 1850, 12], ["rsc", 3750, 6], ["pml", 5000, 3]]
+        possible_addons = [["mul", 1650, 6], ["xml", 1900, 4], ["phl", 2250, 1], ["scr", 1200, 14]]
+        possible_tiles = [["nor", 400, 26], ["tgn", 1050, 10], ["tbb", 750, 2], ["tbi", 750, 2], ["tbn", 750, 2], ["tbg", 750, 2], ["tbo", 750, 2], ["tbd", 750, 2], ["tbe", 750, 2], ["jmp", 850, 3], ["acb", 1125, 11], ["gmb", 1350, 3], ["prm", 1500, 3]]
+    elif shop_level == 3:
+        del possible_balls[:]
+        del possible_addons[:]
+        del possible_tiles[:]
+        possible_balls = [["nor", 1000, 65], ["crg", 2100, 25], ["adc", 2750, 9], ["rnd", 1850, 36], ["trg", 5000, 5], ["rsc", 3750, 7], ["pml", 5000, 3], ["aat", 7000, 1]]
+        possible_addons = [["mul", 1650, 10], ["xml", 1900, 7], ["phl", 2250, 1], ["scr", 1200, 14]]
+        possible_tiles = [["nor", 400, 20], ["tgn", 1050, 9], ["tbb", 750, 2], ["tbi", 750, 2], ["tbn", 750, 2], ["tbg", 750, 2], ["tbo", 750, 2], ["tbd", 750, 2], ["tbe", 750, 2], ["jmp", 850, 4], ["acb", 1125, 12], ["nnb", 1250, 7], ["gmb", 1350, 4], ["prm", 1500, 3]]
+    elif shop_level == 4:
+        del possible_balls[:]
+        del possible_addons[:]
+        del possible_tiles[:]
+        possible_balls = [["nor", 1000, 50], ["crg", 2100, 25], ["adc", 2750, 12], ["rnd", 1850, 40], ["trg", 5000, 8], ["rsc", 3750, 11], ["pml", 5000, 3], ["aat", 7000, 2]]
+        possible_addons = [["mul", 1650, 12], ["xml", 1900, 9], ["phl", 2250, 2], ["scr", 1200, 13]]
+        possible_tiles = [["nor", 400, 18], ["tgn", 1050, 13], ["tbb", 750, 2], ["tbi", 750, 2], ["tbn", 750, 2], ["tbg", 750, 2], ["tbo", 750, 2], ["tbd", 750, 2], ["tbe", 750, 2], ["jmp", 850, 5], ["acb", 1125, 15], ["nnb", 1250, 10], ["gmb", 1350, 5], ["prm", 1500, 4]]
+    elif shop_level == 5:
+        del possible_balls[:]
+        del possible_addons[:]
+        del possible_tiles[:]
+        possible_balls = [["nor", 1000, 40], ["crg", 2100, 25], ["adc", 2750, 13], ["rnd", 1850, 32], ["trg", 5000, 10], ["rsc", 3750, 11], ["pml", 5000, 4], ["aat", 7000, 3]]
+        possible_addons = [["mul", 1650, 13], ["xml", 1900, 9], ["phl", 2250, 3], ["scr", 1200, 12]]
+        possible_tiles = [["nor", 400, 17], ["tgn", 1050, 15], ["tbb", 750, 2], ["tbi", 750, 2], ["tbn", 750, 2], ["tbg", 750, 2], ["tbo", 750, 2], ["tbd", 750, 2], ["tbe", 750, 2], ["jmp", 850, 6], ["acb", 1125, 15], ["nnb", 1250, 10], ["gmb", 1350, 6], ["prm", 1500, 4]]
+
+    print(shop_level, "shop level")
+
+    # creating the weighted lists of items
+    global weighted_balls, weighted_addons, weighted_tiles
+
+    weighted_balls = []
+    weighted_addons = []
+    weighted_tiles = []
+
+    for ball in possible_balls:
+        for index in range(0, ball[2]):
+            weighted_balls.append(ball)
+
+    for addon in possible_addons:
+        for index in range(0, addon[2]):
+            weighted_addons.append(addon)
+
+    for tile in possible_tiles:
+        for index in range(0, tile[2]):
+            weighted_tiles.append(tile)
+
+    print()
+    print(weighted_addons)
+    print()
+    print(possible_addons)
+
 # classes
 
 # a class that gives different functions for different types of tiles
@@ -1004,9 +1087,9 @@ dead = "."
 game_end = False
 show_shop = False
 
-possible_balls = [["nor", 1000, 65], ["crg", 2100, 25], ["adc", 2750, 9], ["rnd", 1850, 36], ["trg", 5000, 5], ["rsc", 3750, 7], ["pml", 5000, 3], ["aat", 7000, 1]]
-possible_addons = [["mul", 1650, 10], ["xml", 1900, 7], ["phl", 2250, 1], ["scr", 1200, 15]]
-possible_tiles = [["nor", 400, 20], ["tgn", 1050, 9], ["tbb", 750, 2], ["tbi", 750, 2], ["tbn", 750, 2], ["tbg", 750, 2], ["tbo", 750, 2], ["tbd", 750, 2], ["tbe", 750, 2], ["jmp", 850, 3], ["acb", 1125, 12], ["nnb", 1250, 7 ], ["gmb", 1350, 4]]
+possible_balls = [["nor", 1000, 30], ["crg", 2100, 9], ["rnd", 1850, 11], ["rsc", 3750, 4]]
+possible_addons = [["scr", 1200, 15]]
+possible_tiles = [["nor", 400, 30], ["acb", 1125, 8], ["gmb", 1350, 4], ["prm", 1500, 2]]
 shop_level = 0
 
 # creating the weighted lists of items
@@ -1058,15 +1141,16 @@ while not game_end:
             #update cell state
             grid[y][x] = update_cell(grid_copy[y][x], alive_neighbors)
 
+
     play_out_round(user_input, cell_number, cell_score, cell_type, cell_index, cell_mult, cell_letter, cell_addons, global_multiplier)
 
     if rolls_counter >= 20:
         rolls_counter = 0
         refreshes_available += 1
 
-    global_multiplier = 1.25 ** shop_level
+    global_multiplier = round(10 * (1.25 ** shop_level)) / 10
 
-
+    
         # output
 
     display_board(cell_letter, cell_number, cell_score, cell_index, cell_type)
