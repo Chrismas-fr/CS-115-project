@@ -13,19 +13,6 @@ import os
 
 # functions
 
-# UNUSED /!\ /!\ --- creates a grid of cells
-def create_grid(rows, cols):
-    board = []
-    # outer loop iterates over rows
-    for y in range(0,  rows):
-        new_row = []
-        # inner loop iterates over columns
-        for x in range(0, cols):
-            new_row.append('x')
-        board.append(new_row)
-
-    return board
-
 # creates all the starting attributes for each tile, and the deck of numbers
 def create_cells(rows, cols):
     letter = []
@@ -136,35 +123,6 @@ def display_board(letters, numbers, scores, tile_indexes, types):
             print(f'[{letter} {number} {score} - {tile_index} {type}]', end=" ")
         print()
 
-# UNUSED /!\ /!\ --- counts neighbors of a cell
-def count_neighbors(board, cur_x, cur_y):
-    row_num = len(board)
-    col_num = len(board[0])
-
-    left = (cur_x - 1) % col_num
-    right = (cur_x + 1) % col_num
-
-    above = (cur_y - 1) % row_num
-    below = (cur_y + 1) % row_num
-    # holds count of alive neighbors
-    neighbor_count = 0
-
-    neighbors = [
-        board[above][left], board[above][cur_x], board[above][right],
-        board[cur_y][left],                      board[cur_y][right],
-        board[below][left], board[below][cur_x], board[below][right]
-    ]
-
-    for cell in neighbors:
-        if cell == 'x':
-            neighbor_count += 1
-
-    return neighbor_count
-
-# UNUSED /!\ /!\ --- does nothing
-def update_cell(cell, num_neighbors):
-    pass
-
 # gets user input and sanitizes it
 def game_interaction(game_score, input_type, price_coe, base_charges, current_charges):
     good_input = False
@@ -186,7 +144,7 @@ def game_interaction(game_score, input_type, price_coe, base_charges, current_ch
         # sanitization for interacting with the shop
         elif input_type == "shop":
             # using base_charges as available refreshes current_charges as shop level
-            user = input(f"b to buy an item | r to refresh ({base_charges} available) | u to upgrade shop ({round((4600+400**(1+0.3*current_charges))+2500*current_charges)} score) | e to exit shop\n >>\t").lower()
+            user = input(f"b to buy an item | r to refresh ({base_charges} available) | u to upgrade shop ({round((4600+400**(1+0.3*current_charges))+2500*current_charges)} score) currently level {current_charges} | e to exit shop\n >>\t").lower()
 
             if len(user) != 1 or user not in "brue":
                 print("Not a valid input, use one of the options.")
@@ -199,79 +157,93 @@ def game_interaction(game_score, input_type, price_coe, base_charges, current_ch
 
         # sanitization for first phase of buying
         elif input_type == "buy1":
-            user = int(input("1 for upgrades | 2 for addons | 3 for tiles\n >>\t"))
+            user = input("1 for upgrades | 2 for addons | 3 for tiles\n >>\t")
 
             if len(str(user)) != 1 or str(user) not in "123":
                 print("Not a valid input, use one of the options.")
             else:
+                user = int(user)
                 good_input = True
 
         # sanitization for second phase of buying (if buying upgrades)
         elif input_type == "buy2a":
-            user = int(input("input the number of the item you want to purchace, or 0 to exit.\n >>\t"))
+            user = input("input the number of the item you want to purchace, or 0 to exit.\n >>\t")
 
-            if len(str(user)) != 1 or user > len(available_upgrades):
+            if user not in "1234567890":
+                print("Not a valid input, enter the number corresponding to the item")
+            elif len(str(user)) != 1 or user > len(available_upgrades):
                 print("Not a valid input, enter the number corresponding to the item")
             elif user == 0:
                 good_input = True
-            elif (available_upgrades[user-1][1]) > game_score:
-                print(f"You don't have enough money to purchace this item, you need {available_upgrades[user-1][1]}, you have {game_score}.")
+            elif (available_upgrades[int(user)-1][1]) > game_score:
+                print(f"You don't have enough money to purchace this item, you need {available_upgrades[int(user)-1][1]}, you have {game_score}.")
             else:
+                user = int(user)
                 good_input = True
                 score = score - (available_upgrades[user-1][1])
                 
         # sanitization for second phase of buying (if buying addons)
         elif input_type == "buy2b":
-            user = int(input("input the number of the item you want to purchace, or 0 to exit.\n >>\t"))
+            user = input("input the number of the item you want to purchace, or 0 to exit.\n >>\t")
 
-            if len(str(user)) != 1 or user > len(available_addons):
+            if user not in "1234567890":
+                print("Not a valid input, enter the number corresponding to the item")
+            elif len(str(user)) != 1 or user > len(available_addons):
                 print("Not a valid input, enter the number corresponding to the item")
             elif user == 0:
                 good_input = True
-            elif (available_addons[user-1][1]) > game_score:
-                print(f"You don't have enough money to purchace this item, you need {available_addons[user-1][1]}, you have {game_score}.")
+            elif (available_addons[int(user)-1][1]) > game_score:
+                print(f"You don't have enough money to purchace this item, you need {available_addons[int(user)-1][1]}, you have {game_score}.")
             else:
+                user = int(user)
                 good_input = True
                 score = score - (available_addons[user-1][1])
 
-        # sanitization for second phase of buying (if buying upgrades)
+        # sanitization for second phase of buying (if buying tiles)
         elif input_type == "buy2c":
-            user = int(input("input the number of the item you want to purchace, or 0 to exit.\n >>\t"))
+            user = input("input the number of the item you want to purchace, or 0 to exit.\n >>\t")
 
-            if len(str(user)) != 1 or user > len(available_tiles):
+            if user not in "1234567890":
                 print("Not a valid input, enter the number corresponding to the item")
-            elif user == 0:
+            elif len(user) != 1 or int(user) > len(available_tiles):
+                print("Not a valid input, enter the number corresponding to the item")
+            elif user == "0":
                 good_input = True
-            elif (available_tiles[user-1][1]) > game_score:
-                print(f"You don't have enough money to purchace this item, you need {available_tiles[user-1][1]}, you have {game_score}.")
+            elif (available_tiles[int(user)-1][1]) > game_score:
+                print(f"You don't have enough money to purchace this item, you need {available_tiles[int(user)-1][1]}, you have {game_score}.")
             else:
+                user = int(user)
                 good_input = True
                 score = score - (available_tiles[user-1][1])
 
         # sanitization for adding a new tile/ball to the board (index)
         elif input_type == "tile":
-            user = int(input("enter the index of the item you want to replace\n >>\t"))
+            user = input("enter the index of the item you want to replace\n >>\t")
 
             bad_letter = 0
-            for letter in str(user):
+            for letter in user:
                 if letter not in "1234567890":
                     bad_letter += 1
-            
-            if bad_letter == 0:
-                good_input = True
+
+            if bad_letter == 0:    
+                if int(user) > 24:
+                    print("Not a valid input")
+                elif bad_letter == 0:
+                    user = int(user)
+                    good_input = True
             else:
                 print("Not a valid input.")
 
         # sanitization for adding a new addon to the board (index)
         elif input_type == "addon":
-            user = int(input("enter the index of the item you want to replace or 99 to exit\n >>\t"))
+            user = input("enter the index of the item you want to replace or 99 to exit\n >>\t")
 
             if user == 99:
                 good_input = True
                 return user
 
             bad_letter = 0
-            for letter in str(user):
+            for letter in user:
                 if letter not in "1234567890":
                     bad_letter += 1
             
@@ -286,20 +258,22 @@ def game_interaction(game_score, input_type, price_coe, base_charges, current_ch
             if slots <= 0:
                 print("This tile has the maximum number of addons")
             elif bad_letter == 0:
+                user = int(user)
                 good_input = True
             else:
                 print("Not a valid input.")
 
         # sanitization for finding a tile
         elif input_type == "findaddon":
-            user = int(input("ender the index of the tile you want to view\n >>\t"))
+            user = input("ender the index of the tile you want to view\n >>\t")
             
             bad_letter = 0
-            for letter in str(user):
+            for letter in user:
                 if letter not in "1234567890":
                     bad_letter += 1
 
             if bad_letter == 0:
+                user = int(user)
                 good_input = True
             else:
                 print("Not a valid input.")
@@ -364,15 +338,11 @@ def find_cell(numbers, roll, triggered_yn):
 
 # finds the score of a tile from its coordinates
 def score_cell(cell_xy, tile_scores):
+    # keeping the really inefficient code I used before, iterated through the rows and cols of tile scores and if the index of the scored cell's coordinates matched, added the score from tile score
+    '''
     score = 0
     cell_x = 0
     cell_y = 0
-    '''
-    for yx in cell_yx:
-        print(yx)
-        cell_x = yx[1]
-        cell_y = yx[0]
-    '''
     cell_x = cell_xy[0]
     cell_y = cell_xy[1]
     index_y = 0
@@ -383,7 +353,9 @@ def score_cell(cell_xy, tile_scores):
                 if index_x == cell_x:
                     score += tile_score
                 index_x += 1
-        index_y += 1
+        index_y += 1'''
+
+    score = tile_scores[cell_xy[1]][cell_xy[0]]
     return score
 
 # tells the user about every item in the game
@@ -477,11 +449,14 @@ def roll_shop(upgrades_list, addons_list, tiles_list, cost_coe):
 # handles shop interactions
 def open_shop(upgrades, addons, tiles):
     global refreshes_available, shop_level, score, refreshes_used
+
+    # the price coefficient is based increased by the shop level and amount of refreshes used
     price_coefficient = round(100*(0.2 ** -abs((shop_level*0.9) * (refreshes_used*0.2))))/100
     print(price_coefficient, "price coe")
 
     print("Deck Upgrades:")
     for index, upgrade in enumerate(upgrades):
+        # calculating the chance of rolling the item relative to the total weight of all items
         weight = 0
         for number in possible_balls:
             weight += number[2]
@@ -505,8 +480,8 @@ def open_shop(upgrades, addons, tiles):
         print(f"\t Tile {index + 1}: {tile[0]} | price: {tile[1]} points | chance of dropping: {round(chance)} | letter: {tile[3]} | score: {tile[4]} | number: {tile[5]}")
     user_input = game_interaction(score, "shop", None, refreshes_available, shop_level)
 
-
     buying = False
+
     if user_input == "e":
         return False
     elif user_input == "r":
@@ -523,19 +498,19 @@ def open_shop(upgrades, addons, tiles):
         update_shop_level(shop_level)
 
     if buying:
-        if int(new_y) == 1:
+        if int(new_y) == 1: # buying a ball
             new_x = game_interaction(score, "buy2a", price_coefficient, None, None)
             if int(new_x) == 0:
                 return
             buy_ball(upgrades, new_x)
-        elif int(new_y) == 2:
+        elif int(new_y) == 2: # buying an addon
             new_x = game_interaction(score, "buy2b", price_coefficient, None, None)
             if int(new_x) == 0:
                 return
             buy_addon(addons, new_x)
-        elif int(new_y) == 3:
+        elif int(new_y) == 3: # buying a tile
             new_x = game_interaction(score, "buy2c", price_coefficient, None, None)
-            if int(new_x) == 0:
+            if int(new_x) == 0: # breaking from the function
                 return
             buy_tile(tiles, new_x)
         
@@ -576,6 +551,7 @@ def buy_addon(shop_addons, new_x):
 
     old_tile = find_cell(user_input, 0, False)
 
+    # checking how many slots have been already filled
     available_slots = 0
     for addon in cell_addons[old_tile[0]][old_tile[1]]:
         if addon == "nor":
@@ -615,10 +591,7 @@ def play_out_round(user, tile_number, tile_score, tile_type, tile_index, tile_mu
     round_roll = None
     tiles_to_score = []
     roll_type = None
-    global score
-    global charges
-    global cell_mult
-    global rolls_counter
+    global score, charges, cell_mult, rolls_counter
     rolling = False
     add_extra_tiles = False
 
@@ -626,7 +599,7 @@ def play_out_round(user, tile_number, tile_score, tile_type, tile_index, tile_mu
     if end_of_round:
         if user.lower() == "ro":
             round_roll, roll_type = game_roll()
-            print("Rolled: ", round_roll, "| Type: ", roll_type) 
+            print("Rolled: ", round_roll, "| Roll type: ", roll_type) 
             charges -= 1
             rolling = True
             rolls_counter += 1
@@ -698,20 +671,16 @@ def play_out_round(user, tile_number, tile_score, tile_type, tile_index, tile_mu
         tiles_to_score = find_cell(tile_number, round_roll, True)
         if add_extra_tiles: tiles_to_score = tiles_to_score + extra_tiles
 
+        # resetting these variables for possible later reuse
         extra_tiles = []
         add_extra_tiles = False
         
-
-        # add tbb tiles after generation
-        # put power tower in while loop not for loop
-
-        #print(tiles_to_score, "tiles to score")
         # creates copy
         tts_copy = copy.deepcopy(tiles_to_score)
 
-        print(tiles_to_score)
+
         while game_generations > 0:
-            # adds tiles that are activation by the triggering of another tile
+            # adds tiles that are activated by the triggering of another tile
             jump_in_tiles = []
             for tile in tiles_to_score:
                 if tile_letter[tile[1]][tile[0]] == "B":
@@ -788,7 +757,6 @@ def play_out_round(user, tile_number, tile_score, tile_type, tile_index, tile_mu
                                 jump_in_tiles.append(new_tile)
 
             for tile_being_scored in tiles_to_score:
-                print("all tiles to score", tiles_to_score)
 
                 # handling addon effects
                 xml_chance = random.randint(0, 4)
@@ -811,9 +779,7 @@ def play_out_round(user, tile_number, tile_score, tile_type, tile_index, tile_mu
                 
                 # creates a tile from the Trigger Tiles class each loop
                 game_tile = Trigger_Tiles(tile_type, tile_index, tile_number, tile_mult, tile_being_scored[1], tile_being_scored[0])
-                #print("neighbors ", game_tile.find_neighbors())
-                print(f"tile being scored, number {tile_number[tile_being_scored[1]][tile_being_scored[0]]} | score {tile_score[tile_being_scored[1]][tile_being_scored[0]]} | type {tile_type[tile_being_scored[1]][tile_being_scored[0]]} | index {tile_index[tile_being_scored[1]][tile_being_scored[0]]} | mult {tile_mult[tile_being_scored[1]][tile_being_scored[0]]}")
-                print(tile_addons[tile_being_scored[1]][tile_being_scored[0]])
+                print(f"tile being scored, number {tile_number[tile_being_scored[1]][tile_being_scored[0]]} | score {tile_score[tile_being_scored[1]][tile_being_scored[0]]} | tile type {tile_type[tile_being_scored[1]][tile_being_scored[0]]} | index {tile_index[tile_being_scored[1]][tile_being_scored[0]]} | mult {tile_mult[tile_being_scored[1]][tile_being_scored[0]]}")
                 print(f"round mult {round_mult}")
 
                 # for effectless tile types, scores the cell, adds the score, and removes it from the list of cells to score
@@ -832,11 +798,7 @@ def play_out_round(user, tile_number, tile_score, tile_type, tile_index, tile_mu
                     add_score = score_cell(tile_being_scored, tile_score)
                     score += round(add_score * tile_mult[tile_being_scored[1]][tile_being_scored[0]] * round_mult)
                     print("adding score:", round(add_score * tile_mult[tile_being_scored[1]][tile_being_scored[0]] * round_mult))
-                    #print("tile type ", tile_type[tile_being_scored[1]][tile_being_scored[0]], "tile location ", tile_being_scored[0], tile_being_scored[1])
-                    #print(" the current tile being scored ", tiles_to_score[0])
                     tts_copy.remove(tts_copy[0])
-                    #print("rest of tiles to score", tiles_to_score)
-                    #print(add_score)
 
                 # for trigger neighbors tile type, scores the cell, and adds all neighbors to tiles to score array
                 if tile_type[tile_being_scored[1]][tile_being_scored[0]] == "tgn":
@@ -844,14 +806,11 @@ def play_out_round(user, tile_number, tile_score, tile_type, tile_index, tile_mu
                     score += round(add_score * tile_mult[tile_being_scored[1]][tile_being_scored[0]] * round_mult)
                     print("adding score:", round(add_score * tile_mult[tile_being_scored[1]][tile_being_scored[0]] * round_mult))
                     tts_copy.remove(tts_copy[0])
-                    #print("\t\t\t", tile_being_scored[1], tile_being_scored[0])
 
                     for neighbor in game_tile.find_neighbors():
                         tts_copy.append(neighbor)
-                    #print("\tall the neighbors: ttscopy", tts_copy)
-                    #print(tiles_to_score, "tiles to score")
-                    #print(add_score, end=", ")
 
+                # adds a random number of tiles between 3 and 8
                 if tile_type[tile_being_scored[1]][tile_being_scored[0]] == "acb":
                     add_score = score_cell(tile_being_scored, tile_score)
                     score += round(add_score * tile_mult[tile_being_scored[1]][tile_being_scored[0]] * round_mult)
@@ -865,6 +824,7 @@ def play_out_round(user, tile_number, tile_score, tile_type, tile_index, tile_mu
                         if not new_tile in extra_tiles and not new_tile == tile_being_scored:
                             extra_tiles.append(new_tile)
 
+                # 85% chance to score normally, 15% chance to have 20x score
                 if tile_type[tile_being_scored[1]][tile_being_scored[0]] == "gmb":
                     chance = random.randint(0,100)
 
@@ -879,15 +839,17 @@ def play_out_round(user, tile_number, tile_score, tile_type, tile_index, tile_mu
                         print("adding score:", round(add_score * tile_mult[tile_being_scored[1]][tile_being_scored[0]] * round_mult))
                         tts_copy.remove(tts_copy[0])
 
+                # multiplies the tile's multiplier by 1.15x when scored
                 if tile_type[tile_being_scored[1]][tile_being_scored[0]] == "prm":
                     cell_mult[tile_being_scored[1]][tile_being_scored[0]] += round(1000*(cell_mult[tile_being_scored[1]][tile_being_scored[0]] * 0.15))/1000
-                    print(cell_mult[tile_being_scored[1]][tile_being_scored[0]], "CELL MULT")
 
                     add_score = score_cell(tile_being_scored, tile_score)
                     score += round(add_score * tile_mult[tile_being_scored[1]][tile_being_scored[0]] * round_mult)
                     print("adding score:", round(add_score * tile_mult[tile_being_scored[1]][tile_being_scored[0]] * round_mult))
                     tts_copy.remove(tts_copy[0])
 
+
+                # undoes tile addon effects
                 for addon in tile_addons[tile_being_scored[1]][tile_being_scored[0]]:
                     if addon == "mul":
                         tile_mult[tile_being_scored[1]][tile_being_scored[0]] -= 0.2
@@ -915,15 +877,10 @@ def play_out_round(user, tile_number, tile_score, tile_type, tile_index, tile_mu
             tiles_to_score = copy.deepcopy(tts_copy)
 
             game_generations -= 1
-            print("end of gen\n\n\n")
             #stops the round if theres nothing left to do
             if len(tiles_to_score) < 1:
                 game_generations = 0
-            print(game_generations, "generations")
-            #time.sleep(0.5)
 
-
-        #create tile from class as first thing, create array of each tile effected by last round (first round just defaults to the numbers from ball) then run each tile separately from array and put each tile affected into the array and repeat until generations are used up
         #memorial of the awful code i was trying to use to run a round (rip)
         '''
         if end_of_round:
@@ -1000,8 +957,6 @@ def update_shop_level(shop_level):
         possible_addons = [["mul", 1650, 13], ["xml", 1900, 9], ["phl", 2250, 3], ["scr", 1200, 12]]
         possible_tiles = [["nor", 400, 17], ["tgn", 1050, 15], ["tbb", 750, 2], ["tbi", 750, 2], ["tbn", 750, 2], ["tbg", 750, 2], ["tbo", 750, 2], ["tbd", 750, 2], ["tbe", 750, 2], ["jmp", 850, 6], ["acb", 1125, 15], ["nnb", 1250, 10], ["gmb", 1350, 6], ["prm", 1500, 4]]
 
-    print(shop_level, "shop level")
-
     # creating the weighted lists of items
     global weighted_balls, weighted_addons, weighted_tiles
 
@@ -1071,23 +1026,18 @@ class Call_Balls:
 
 
 # ----- global variables -----
-#num_rows = int(input("number of rows: >>\t"))
-num_rows = 5 #num rows can be increased to extend board downward num cols can not, things break
+num_rows = 5
 num_cols = 5
 
 starting_charges = 500
-charges = copy.deepcopy(starting_charges)-200
+charges = copy.deepcopy(starting_charges)
 bingo_discard = []
 round_generations = 5
 rolls_counter = 0
-refreshes_available = 10
+refreshes_available = 0
 refreshes_used = 0
 
-alive = "x"
-dead = "."
-
 game_end = False
-show_shop = False
 
 possible_balls = [["nor", 1000, 30], ["crg", 2100, 9], ["rnd", 1850, 11], ["rsc", 3750, 4]]
 possible_addons = [["scr", 1200, 15]]
@@ -1111,11 +1061,10 @@ for tile in possible_tiles:
     for index in range(0, tile[2]):
         weighted_tiles.append(tile)
         
-score = 100000
+score = 0
 global_multiplier = 1
 
 # ----- main code -----
-grid = create_grid(num_rows, num_cols)
 cell_letter, cell_number, cell_score, cell_addons, cell_type, bingo_deck, cell_index, cell_mult = create_cells(num_rows, num_cols)
 available_upgrades, available_addons, available_tiles = roll_shop(weighted_balls, weighted_addons, weighted_tiles, 1)
 
@@ -1129,20 +1078,6 @@ while not game_end:
 
     if charges <= 1:
         game_end = True
-    # create a copy of grid
-    grid_copy = copy.deepcopy(grid)
-
-    # outer loop - rows
-    for y in range(0, num_rows):
-        # inner loop - columns
-        for x in range(num_cols):
-
-            # count alive neighbors
-            alive_neighbors = count_neighbors(grid_copy, x, y)
-
-            #update cell state
-            grid[y][x] = update_cell(grid_copy[y][x], alive_neighbors)
-
 
     play_out_round(user_input, cell_number, cell_score, cell_type, cell_index, cell_mult, cell_letter, cell_addons, global_multiplier)
 
