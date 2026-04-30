@@ -104,7 +104,7 @@ def create_cells(rows, cols):
     for index, num in enumerate(random_numbers):
         entry = []
         entry.append(num)
-        entry.append("rsc")
+        entry.append("nor")
         entry.append(index)
         bingo_numbers.append(entry)
     random.shuffle(bingo_numbers)
@@ -185,12 +185,15 @@ def game_interaction(game_score, input_type, price_coe, base_charges, current_ch
 
         # sanitization for interacting with the shop
         elif input_type == "shop":
-            user = input(f"b to buy an item | r to refresh ({game_score} available) | u to upgrade shop ({base_charges} score) | e to exit shop\n >>\t").lower()
+            # using base_charges as available refreshes current_charges as shop level
+            user = input(f"b to buy an item | r to refresh ({base_charges} available) | u to upgrade shop ({round((4600+400**(1+0.3*current_charges))+2500*current_charges)} score) | e to exit shop\n >>\t").lower()
 
             if len(user) != 1 or user not in "brue":
                 print("Not a valid input, use one of the options.")
-            elif user == "r" and game_score < 1:
+            elif user == "r" and base_charges < 1:
                 print("You do not have any available refreshes")
+            elif user == "u" and (game_score < round((4600+400**(1+0.3*current_charges))+2500*current_charges)):
+                print(f"You do not have enough score, you need {round((4600+400**(1+0.3*current_charges))+2500*current_charges)}, and you have {game_score}")
             else:
                 good_input = True
 
@@ -421,7 +424,11 @@ def item_help():
     print("\nTips to Remember:")
     print("\tBuying a tile removes any permanent multipliers it may have, and reverts its associated ball back to a normal type\n")
     print("\tRefreshing your deck takes 10% of your current score, and needs at least 100 score to work\n")
-    print("\tYou need to roll 20 times before you can open the shop\n\n")
+    print("\tYou need to roll 20 times before you can open the shop\n")
+    print("\tGlobal multiplier is increased every shop level: global mult = 1.25^shop_level\n")
+    print("\tShop level 5 is the last level to upgrade the items, but levels past it will still increase the global multiplier\n")
+    print("\tShop prices are increased each time you refresh and upgrade the shop\n")
+    print()
     
 # determines what items show up in the shop
 def roll_shop(upgrades_list, addons_list, tiles_list, cost_coe):
@@ -437,7 +444,7 @@ def roll_shop(upgrades_list, addons_list, tiles_list, cost_coe):
             upgrade_index = random.randint(0, len(upgrades_list)-1)
             for upgrade in upgrades_list[upgrade_index]:
                 new_upgrade.append(upgrade)
-            new_upgrade[1] = math.floor((new_upgrade[1] * (random.randint(8750, 11500) / 10000)) * cost_coe)
+            new_upgrade[1] = round(math.floor((new_upgrade[1] * (random.randint(8750, 11500) / 10000)) * cost_coe))
             upgrades.append(new_upgrade)
 
 
@@ -445,7 +452,7 @@ def roll_shop(upgrades_list, addons_list, tiles_list, cost_coe):
             tile_index = random.randint(0, len(tiles_list)-1)
             for tile in tiles_list[tile_index]:
                 new_tile.append(tile)
-            new_tile[1] = math.floor((new_tile[1] * (random.randint(8750, 11500) / 10000)) * cost_coe)
+            new_tile[1] = round(math.floor((new_tile[1] * (random.randint(8750, 11500) / 10000)) * cost_coe))
             # gives the new tile a letter, score, and number
             new_tile.append(random.choice(letters))
             new_tile.append(random.randint(1,90))
@@ -462,19 +469,16 @@ def roll_shop(upgrades_list, addons_list, tiles_list, cost_coe):
         addon_index = random.randint(0, len(addons_list)-1)
         for addon in addons_list[addon_index]:
             new_addon.append(addon)
-        new_addon[1] = (math.floor(new_addon[1] * (random.randint(8750, 11500) / 10000)) * cost_coe)
+        new_addon[1] = round(math.floor(new_addon[1] * (random.randint(8750, 11500) / 10000)) * cost_coe)
         addons.append(new_addon)
-
-    print(upgrades)
-    print(addons)
-    print(tiles)
 
     return upgrades, addons, tiles
 
 # handles shop interactions
 def open_shop(upgrades, addons, tiles):
-    price_coefficient = 1
-    global refreshes_available
+    global refreshes_available, shop_level, score, refreshes_used
+    price_coefficient = round(100*(0.2 ** -abs((shop_level*0.9) * (refreshes_used*0.2))))/100
+    print(price_coefficient, "price coe")
 
     print("Deck Upgrades:")
     for index, upgrade in enumerate(upgrades):
@@ -499,7 +503,7 @@ def open_shop(upgrades, addons, tiles):
             weight += number[2]
         chance = (100*tile[2]) / weight
         print(f"\t Tile {index + 1}: {tile[0]} | price: {tile[1]} points | chance of dropping: {round(chance)} | letter: {tile[3]} | score: {tile[4]} | number: {tile[5]}")
-    user_input = game_interaction(refreshes_available, "shop", None, 1000, None)
+    user_input = game_interaction(score, "shop", None, refreshes_available, shop_level)
 
 
     buying = False
@@ -509,30 +513,31 @@ def open_shop(upgrades, addons, tiles):
         global available_upgrades, available_addons, available_tiles
         available_upgrades, available_addons, available_tiles = roll_shop(weighted_balls, weighted_addons, weighted_tiles, price_coefficient)
         refreshes_available -= 1
+        refreshes_used += 1
     elif user_input == "b":
         new_y = game_interaction(None, "buy1", None, None, None)
         buying = True
     elif user_input == "u":
-        global shop_level
+        score = score - round((4600+400**(1+0.3*shop_level))+2500*shop_level)
         shop_level += 1
         update_shop_level(shop_level)
 
-        if buying:
-            if int(new_y) == 1:
-                new_x = game_interaction(score, "buy2a", price_coefficient, None, None)
-                if int(new_x) == 0:
-                    return
-                buy_ball(upgrades, new_x)
-            elif int(new_y) == 2:
-                new_x = game_interaction(score, "buy2b", price_coefficient, None, None)
-                if int(new_x) == 0:
-                    return
-                buy_addon(addons, new_x)
-            elif int(new_y) == 3:
-                new_x = game_interaction(score, "buy2c", price_coefficient, None, None)
-                if int(new_x) == 0:
-                    return
-                buy_tile(tiles, new_x)
+    if buying:
+        if int(new_y) == 1:
+            new_x = game_interaction(score, "buy2a", price_coefficient, None, None)
+            if int(new_x) == 0:
+                return
+            buy_ball(upgrades, new_x)
+        elif int(new_y) == 2:
+            new_x = game_interaction(score, "buy2b", price_coefficient, None, None)
+            if int(new_x) == 0:
+                return
+            buy_addon(addons, new_x)
+        elif int(new_y) == 3:
+            new_x = game_interaction(score, "buy2c", price_coefficient, None, None)
+            if int(new_x) == 0:
+                return
+            buy_tile(tiles, new_x)
         
     return True
 
@@ -596,6 +601,7 @@ def buy_ball(shop_upgrades, new_x):
 
     del shop_upgrades[new_x-1]
 
+# shows the addons for a specific tile
 def find_addons():
     user_input = game_interaction(None, "findaddon", None, None, None)
 
@@ -657,7 +663,8 @@ def play_out_round(user, tile_number, tile_score, tile_type, tile_index, tile_mu
                 round_ball.add_charge(26)
         if roll_type == "rnd": # activates 1 random other number
             rnd_tile = random.randint(0,24)
-            extra_tiles = find_cell(rnd_tile, None, False)
+            extra_tiles = []
+            extra_tiles.append(find_cell(rnd_tile, None, False))
             add_extra_tiles = True
         if roll_type == "trg": # chance to trigger 10 random unique tiles
             chance = random.randint(0,100)
@@ -702,8 +709,8 @@ def play_out_round(user, tile_number, tile_score, tile_type, tile_index, tile_mu
         # creates copy
         tts_copy = copy.deepcopy(tiles_to_score)
 
+        print(tiles_to_score)
         while game_generations > 0:
-
             # adds tiles that are activation by the triggering of another tile
             jump_in_tiles = []
             for tile in tiles_to_score:
@@ -915,8 +922,6 @@ def play_out_round(user, tile_number, tile_score, tile_type, tile_index, tile_mu
             print(game_generations, "generations")
             #time.sleep(0.5)
 
-            print(tile_mult)
-
 
         #create tile from class as first thing, create array of each tile effected by last round (first round just defaults to the numbers from ball) then run each tile separately from array and put each tile affected into the array and repeat until generations are used up
         #memorial of the awful code i was trying to use to run a round (rip)
@@ -947,6 +952,7 @@ def play_out_round(user, tile_number, tile_score, tile_type, tile_index, tile_mu
                 end_of_round = True
         '''
 
+# changes the items that can show up in the shop depending on the shop level
 def update_shop_level(shop_level):
     global possible_balls, possible_addons, possible_tiles
 
@@ -1015,11 +1021,6 @@ def update_shop_level(shop_level):
         for index in range(0, tile[2]):
             weighted_tiles.append(tile)
 
-    print()
-    print(weighted_addons)
-    print()
-    print(possible_addons)
-
 # classes
 
 # a class that gives different functions for different types of tiles
@@ -1075,11 +1076,12 @@ num_rows = 5 #num rows can be increased to extend board downward num cols can no
 num_cols = 5
 
 starting_charges = 500
-charges = copy.deepcopy(starting_charges) -20
+charges = copy.deepcopy(starting_charges)-200
 bingo_discard = []
 round_generations = 5
 rolls_counter = 0
-refreshes_available = 100
+refreshes_available = 10
+refreshes_used = 0
 
 alive = "x"
 dead = "."
@@ -1109,7 +1111,7 @@ for tile in possible_tiles:
     for index in range(0, tile[2]):
         weighted_tiles.append(tile)
         
-score = 10000000
+score = 100000
 global_multiplier = 1
 
 # ----- main code -----
