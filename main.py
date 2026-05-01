@@ -171,7 +171,7 @@ def game_interaction(game_score, input_type, price_coe, base_charges, current_ch
 
             if user not in "1234567890":
                 print("Not a valid input, enter the number corresponding to the item")
-            elif len(str(user)) != 1 or user > len(available_upgrades):
+            elif len(str(user)) != 1 or int(user) > len(available_upgrades):
                 print("Not a valid input, enter the number corresponding to the item")
             elif user == 0:
                 good_input = True
@@ -188,7 +188,7 @@ def game_interaction(game_score, input_type, price_coe, base_charges, current_ch
 
             if user not in "1234567890":
                 print("Not a valid input, enter the number corresponding to the item")
-            elif len(str(user)) != 1 or user > len(available_addons):
+            elif len(str(user)) != 1 or int(user) > len(available_addons):
                 print("Not a valid input, enter the number corresponding to the item")
             elif user == 0:
                 good_input = True
@@ -225,8 +225,15 @@ def game_interaction(game_score, input_type, price_coe, base_charges, current_ch
                 if letter not in "1234567890":
                     bad_letter += 1
 
+            print("bad letter", bad_letter)
+            cell_index_len = 0
+            for row in cell_index:
+                for col in row:
+                    cell_index_len += 1
+
             if bad_letter == 0:    
-                if int(user) > 24:
+                if int(user) > cell_index_len:
+                    print("len cell index", cell_index_len)
                     print("Not a valid input")
                 elif bad_letter == 0:
                     user = int(user)
@@ -247,13 +254,11 @@ def game_interaction(game_score, input_type, price_coe, base_charges, current_ch
                 if letter not in "1234567890":
                     bad_letter += 1
             
-            temp_tile = find_cell(user, None, False)
+            temp_tile = find_cell(int(user), None, False)
             slots = 0
             for tile in cell_addons[temp_tile[0]][temp_tile[1]]:
                 if tile == "nor":
                     slots += 1
-            
-            print(slots, "SLOTSSS\n\n")
             
             if slots <= 0:
                 print("This tile has the maximum number of addons")
@@ -366,7 +371,7 @@ def item_help():
     print("\tnor type upgrades: The default upgrade type, has no effect\n")
     print("\tcrg type upgrades: Doesn't consume charges when rolled\n")
     print("\tadc type upgrades: Adds a certain amount of charges based on random chance:\n\t\t60% to do nothing\n\t\t17.5% to add 1\n\t\t12.5% to add 2\n\t\t5% to add 4\n\t\t4.5% to add 10\n\t\t0.5% to add 25\n")
-    print("\trnd type upgrades: Triggers one additional tile\n")
+    print("\trnd type upgrades: Triggers two additional tiles\n")
     print("\ttrg type upgrades: 25% chance to trigger 10 additional tiles\n")
     print("\trsc type upgrades: Adds temporary 20% to the round score\n")
     print("\tpml type upgrades: 35% chance to add a permanent 12% multiplier to all tiles\n")
@@ -391,8 +396,12 @@ def item_help():
     print("\t\ttbd type tiles: Triggered after a tile with an odd number is triggered")
     print("\t\ttbe type tiles: Triggered after a tile with an even number is triggered")
     print("\t\tjmp type tiles: A special Jump in tile, has a 10% chance to trigger after any tile is triggered\n")
-    print("\tacb type tiles: Additionally triggers between 3 and 8 random unique tiles")
+    print("\tacb type tiles: Additionally triggers between 3 and 8 random unique tiles\n")
     
+    print("\nSpecial Items:")
+    print("\tSPECIAL ITEM: Global Multiplier 1.2x: Multiplies the global round multiplier by 1.2x\n")
+    print("\tSPECIAL ITEM: Max Generations + 1: Increases the amount of generations in a round by 1\n")
+
     print("\nTips to Remember:")
     print("\tBuying a tile removes any permanent multipliers it may have, and reverts its associated ball back to a normal type\n")
     print("\tRefreshing your deck takes 10% of your current score, and needs at least 100 score to work\n")
@@ -448,10 +457,11 @@ def roll_shop(upgrades_list, addons_list, tiles_list, cost_coe):
 
 # handles shop interactions
 def open_shop(upgrades, addons, tiles):
-    global refreshes_available, shop_level, score, refreshes_used
+    global refreshes_available, shop_level, score, refreshes_used, items_bought
 
-    # the price coefficient is based increased by the shop level and amount of refreshes used
-    price_coefficient = round(100*(0.2 ** -abs((shop_level*0.9) * (refreshes_used*0.2))))/100
+    # the price coefficient is based increased by the shop level, amount of refreshes used, and amount of items bought
+    price_coefficient = round(100*(0.3 ** -abs(((shop_level*0.75)+(refreshes_used*0.14))*(1+refreshes_used*0.002)+(items_bought*0.02))))/100
+    print(shop_level, refreshes_used, items_bought)
     print(price_coefficient, "price coe")
 
     print("Deck Upgrades:")
@@ -518,6 +528,8 @@ def open_shop(upgrades, addons, tiles):
 
 # prompts the user for what tile they want to buy, and replaces it
 def buy_tile(shop_tiles, new_x):
+    global items_bought
+
     user_input = game_interaction(None, "tile", None, None, None)
 
     old_tile = find_cell(user_input, 0, False)
@@ -527,6 +539,12 @@ def buy_tile(shop_tiles, new_x):
     cell_letter[old_tile[0]][old_tile[1]] = shop_tiles[new_x-1][3]
     cell_score[old_tile[0]][old_tile[1]] = shop_tiles[new_x-1][4]
     cell_number[old_tile[0]][old_tile[1]] = shop_tiles[new_x-1][5]
+
+    # resetting the addons of the tile
+    for row in cell_addons:
+        for col in row:
+            for addon in col:
+                addon = "nor"
 
     # replacing the associated ball with a blank new one of the correct number
     all_deck = bingo_deck + bingo_discard
@@ -539,11 +557,20 @@ def buy_tile(shop_tiles, new_x):
 
     #removing the purchaced tile from the shop
     del shop_tiles[new_x-1]
-
-    #print(shop_tiles[new_x-1][0], new_x, shop_tiles)
+    items_bought += 1
 
 # prompts the user for what addon they want to buy, and replaces it
 def buy_addon(shop_addons, new_x):
+    global items_bought
+
+    if not len(str(new_x)) == 3:
+        if shop_addons[new_x-1][0] == "SPECIAL ITEM: Max Generations + 1":
+            print("asdfasdasdfasdf")
+            global allowed_generations
+            allowed_generations += 1
+            items_bought += 1
+            return
+
     user_input = game_interaction(None, "addon", None, None, None)
 
     if user_input == 99:
@@ -565,9 +592,19 @@ def buy_addon(shop_addons, new_x):
         cell_addons[old_tile[0]][old_tile[1]][2] = shop_addons[new_x-1][0]
 
     del shop_addons[new_x-1]
+    items_bought += 1
 
 # prompts the user for what ball they want to buy, and replaces it
 def buy_ball(shop_upgrades, new_x):
+    global items_bought
+
+    if not len(str(new_x)) == 3:
+        if shop_upgrades[new_x-1][0] == "SPECIAL ITEM: Global Multiplier 1.2x":
+            global mult_increaser
+            mult_increaser += 1
+            items_bought += 1
+            return
+
     user_input = game_interaction(None, "tile", None, None, None)
 
     all_deck = bingo_deck + bingo_discard
@@ -576,6 +613,7 @@ def buy_ball(shop_upgrades, new_x):
             ball[1] = shop_upgrades[new_x-1][0]
 
     del shop_upgrades[new_x-1]
+    items_bought += 1
 
 # shows the addons for a specific tile
 def find_addons():
@@ -585,9 +623,8 @@ def find_addons():
     print(f"Tile {user_input}'s addons: {cell_addons[tile[0]][tile[1]]}")
 
 # handles everything in a roll
-def play_out_round(user, tile_number, tile_score, tile_type, tile_index, tile_mult, tile_letter, tile_addons, round_mult):
+def play_out_round(user, tile_number, tile_score, tile_type, tile_index, tile_mult, tile_letter, tile_addons, round_mult, game_generations):
     end_of_round = True
-    game_generations = 5
     round_roll = None
     tiles_to_score = []
     roll_type = None
@@ -635,9 +672,10 @@ def play_out_round(user, tile_number, tile_score, tile_type, tile_index, tile_mu
             if chance > 995:
                 round_ball.add_charge(26)
         if roll_type == "rnd": # activates 1 random other number
-            rnd_tile = random.randint(0,24)
             extra_tiles = []
-            extra_tiles.append(find_cell(rnd_tile, None, False))
+            for i in range(0,2):
+                rnd_tile = random.randint(0,24)
+                extra_tiles.append(find_cell(rnd_tile, None, False))
             add_extra_tiles = True
         if roll_type == "trg": # chance to trigger 10 random unique tiles
             chance = random.randint(0,100)
@@ -864,7 +902,7 @@ def play_out_round(user, tile_number, tile_score, tile_type, tile_index, tile_mu
                     if addon == "scr":
                         tile_score[tile_being_scored[1]][tile_being_scored[0]] -= additive_score
 
-
+            print("generation", game_generations)
                 
             # converts the main array into the copy (changing an array while iterating though it causes problems, using a copy is a workaround)
             for tile in jump_in_tiles:
@@ -925,36 +963,36 @@ def update_shop_level(shop_level):
         del possible_balls[:]
         del possible_addons[:]
         del possible_tiles[:]
-        possible_balls = [["nor", 1000, 25], ["crg", 2100, 10], ["rnd", 1850, 12], ["rsc", 3750, 5], ["pml", 5000, 3]]
+        possible_balls = [["SPECIAL ITEM: Global Multiplier 1.2x", 6000, 2], ["nor", 1000, 25], ["crg", 2100, 10], ["rnd", 1850, 12], ["rsc", 3750, 5], ["pml", 5000, 3]]
         possible_addons = [["mul", 1650, 5], ["scr", 1200, 15]]
         possible_tiles = [["nor", 400, 26], ["tbb", 750, 2], ["tbi", 750, 2], ["tbn", 750, 2], ["tbg", 750, 2], ["tbo", 750, 2], ["tbd", 750, 2], ["tbe", 750, 2], ["acb", 1125, 9], ["gmb", 1350, 3], ["prm", 1500, 2]]
     elif shop_level == 2:
         del possible_balls[:]
         del possible_addons[:]
         del possible_tiles[:]
-        possible_balls = [["nor", 1000, 38], ["crg", 2100, 11], ["adc", 2750, 7], ["rnd", 1850, 12], ["rsc", 3750, 6], ["pml", 5000, 3]]
-        possible_addons = [["mul", 1650, 6], ["xml", 1900, 4], ["phl", 2250, 1], ["scr", 1200, 14]]
+        possible_balls = [["SPECIAL ITEM: Global Multiplier 1.2x", 6000, 2], ["nor", 1000, 38], ["crg", 2100, 11], ["adc", 2750, 7], ["rnd", 1850, 12], ["rsc", 3750, 6], ["pml", 5000, 3]]
+        possible_addons = [["SPECIAL ITEM: Max Generations + 1", 5550, 1], ["mul", 1650, 18], ["xml", 1900, 12], ["phl", 2250, 3], ["scr", 1200, 42]]
         possible_tiles = [["nor", 400, 26], ["tgn", 1050, 10], ["tbb", 750, 2], ["tbi", 750, 2], ["tbn", 750, 2], ["tbg", 750, 2], ["tbo", 750, 2], ["tbd", 750, 2], ["tbe", 750, 2], ["jmp", 850, 3], ["acb", 1125, 11], ["gmb", 1350, 3], ["prm", 1500, 3]]
     elif shop_level == 3:
         del possible_balls[:]
         del possible_addons[:]
         del possible_tiles[:]
-        possible_balls = [["nor", 1000, 65], ["crg", 2100, 25], ["adc", 2750, 9], ["rnd", 1850, 36], ["trg", 5000, 5], ["rsc", 3750, 7], ["pml", 5000, 3], ["aat", 7000, 1]]
-        possible_addons = [["mul", 1650, 10], ["xml", 1900, 7], ["phl", 2250, 1], ["scr", 1200, 14]]
+        possible_balls = [["SPECIAL ITEM: Global Multiplier 1.2x", 6000, 2], ["nor", 1000, 65], ["crg", 2100, 25], ["adc", 2750, 9], ["rnd", 1850, 36], ["trg", 5000, 5], ["rsc", 3750, 7], ["pml", 5000, 3], ["aat", 7000, 1]]
+        possible_addons = [["SPECIAL ITEM: Max Generations + 1", 5550, 1], ["mul", 1650, 30], ["xml", 1900, 21], ["phl", 2250, 3], ["scr", 1200, 42]]
         possible_tiles = [["nor", 400, 20], ["tgn", 1050, 9], ["tbb", 750, 2], ["tbi", 750, 2], ["tbn", 750, 2], ["tbg", 750, 2], ["tbo", 750, 2], ["tbd", 750, 2], ["tbe", 750, 2], ["jmp", 850, 4], ["acb", 1125, 12], ["nnb", 1250, 7], ["gmb", 1350, 4], ["prm", 1500, 3]]
     elif shop_level == 4:
         del possible_balls[:]
         del possible_addons[:]
         del possible_tiles[:]
-        possible_balls = [["nor", 1000, 50], ["crg", 2100, 25], ["adc", 2750, 12], ["rnd", 1850, 40], ["trg", 5000, 8], ["rsc", 3750, 11], ["pml", 5000, 3], ["aat", 7000, 2]]
-        possible_addons = [["mul", 1650, 12], ["xml", 1900, 9], ["phl", 2250, 2], ["scr", 1200, 13]]
+        possible_balls = [["SPECIAL ITEM: Global Multiplier 1.2x", 6000, 2], ["nor", 1000, 50], ["crg", 2100, 25], ["adc", 2750, 12], ["rnd", 1850, 40], ["trg", 5000, 8], ["rsc", 3750, 11], ["pml", 5000, 3], ["aat", 7000, 2]]
+        possible_addons = [["SPECIAL ITEM: Max Generations + 1", 5550, 1], ["mul", 1650, 36], ["xml", 1900, 27], ["phl", 2250, 6], ["scr", 1200, 39]]
         possible_tiles = [["nor", 400, 18], ["tgn", 1050, 13], ["tbb", 750, 2], ["tbi", 750, 2], ["tbn", 750, 2], ["tbg", 750, 2], ["tbo", 750, 2], ["tbd", 750, 2], ["tbe", 750, 2], ["jmp", 850, 5], ["acb", 1125, 15], ["nnb", 1250, 10], ["gmb", 1350, 5], ["prm", 1500, 4]]
     elif shop_level == 5:
         del possible_balls[:]
         del possible_addons[:]
         del possible_tiles[:]
-        possible_balls = [["nor", 1000, 40], ["crg", 2100, 25], ["adc", 2750, 13], ["rnd", 1850, 32], ["trg", 5000, 10], ["rsc", 3750, 11], ["pml", 5000, 4], ["aat", 7000, 3]]
-        possible_addons = [["mul", 1650, 13], ["xml", 1900, 9], ["phl", 2250, 3], ["scr", 1200, 12]]
+        possible_balls = [["SPECIAL ITEM: Global Multiplier 1.2x", 6000, 2], ["nor", 1000, 40], ["crg", 2100, 25], ["adc", 2750, 13], ["rnd", 1850, 32], ["trg", 5000, 10], ["rsc", 3750, 11], ["pml", 5000, 4], ["aat", 7000, 3]]
+        possible_addons = [["SPECIAL ITEM: Max Generations + 1", 5550, 1], ["mul", 1650, 39], ["xml", 1900, 27], ["phl", 2250, 9], ["scr", 1200, 36]]
         possible_tiles = [["nor", 400, 17], ["tgn", 1050, 15], ["tbb", 750, 2], ["tbi", 750, 2], ["tbn", 750, 2], ["tbg", 750, 2], ["tbo", 750, 2], ["tbd", 750, 2], ["tbe", 750, 2], ["jmp", 850, 6], ["acb", 1125, 15], ["nnb", 1250, 10], ["gmb", 1350, 6], ["prm", 1500, 4]]
 
     # creating the weighted lists of items
@@ -978,7 +1016,7 @@ def update_shop_level(shop_level):
 
 # classes
 
-# a class that gives different functions for different types of tiles
+# handles the longer code snippits for tiles
 class Trigger_Tiles:
     def __init__(self, tile_type, tile_index, tile_number, tile_mult, cur_x, cur_y):
         self.tile_type = tile_type
@@ -1015,7 +1053,7 @@ class Trigger_Tiles:
         rannum = random.randint(0, 24)
         return find_cell(rannum, None, False)
 
-    
+# handles the longer code snippits for tiles    
 class Call_Balls:
     def __init__(self):
         pass
@@ -1036,6 +1074,9 @@ round_generations = 5
 rolls_counter = 0
 refreshes_available = 0
 refreshes_used = 0
+allowed_generations = 5
+items_bought = 0
+mult_increaser = 0
 
 game_end = False
 
@@ -1079,13 +1120,13 @@ while not game_end:
     if charges <= 1:
         game_end = True
 
-    play_out_round(user_input, cell_number, cell_score, cell_type, cell_index, cell_mult, cell_letter, cell_addons, global_multiplier)
+    play_out_round(user_input, cell_number, cell_score, cell_type, cell_index, cell_mult, cell_letter, cell_addons, global_multiplier, allowed_generations)
 
     if rolls_counter >= 20:
         rolls_counter = 0
         refreshes_available += 1
 
-    global_multiplier = round(10 * (1.25 ** shop_level)) / 10
+    global_multiplier = (round(100 * (1.25 ** shop_level)) / 100) * (1 + (0.2 * mult_increaser))
 
     
         # output
